@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useSidebarStore } from "../../hooks/useSidebarStore"
+import { useUnreadCount } from "../../features/messaging/hooks"
+import { Badge } from "../ui/badge"
 import { Avatar, AvatarFallback } from "../ui/avatar"
 import { Button } from "../ui/button"
 
@@ -36,6 +38,7 @@ const navItems = [
 export function Sidebar() {
   const { isCollapsed, toggle } = useSidebarStore()
   const { pathname } = useLocation()
+  const { data: unreadCount = 0 } = useUnreadCount()
 
   return (
     <motion.aside
@@ -65,6 +68,7 @@ export function Sidebar() {
               >
                 <Icon className="h-4 w-4" />
                 {!isCollapsed && <span>{item.label}</span>}
+                {item.label === "Messages" && unreadCount > 0 && !isCollapsed && <Badge className="ml-auto">{unreadCount}</Badge>}
               </NavLink>
             )
           })}
