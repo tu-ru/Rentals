@@ -98,10 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (!nextProfile) {
-        return
-      }
-
       if (!nextProfile.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
