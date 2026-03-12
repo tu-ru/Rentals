@@ -16,6 +16,7 @@ import {
   Wrench,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useAuth } from "../../app/providers"
 import { useSidebarStore } from "../../hooks/useSidebarStore"
 import { useUnreadCount } from "../../features/messaging/hooks"
 import { Badge } from "../ui/badge"
@@ -39,6 +40,15 @@ export function Sidebar() {
   const { isCollapsed, toggle } = useSidebarStore()
   const { pathname } = useLocation()
   const { data: unreadCount = 0 } = useUnreadCount()
+  const { signOut } = useAuth()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error("Failed to sign out from sidebar", error)
+    }
+  }
 
   return (
     <motion.aside
@@ -92,7 +102,7 @@ export function Sidebar() {
             </div>
           )}
           {!isCollapsed && (
-            <Button variant="ghost" size="icon" aria-label="Logout">
+            <Button variant="ghost" size="icon" aria-label="Logout" onClick={() => void handleSignOut()}>
               <LogOut className="h-4 w-4" />
             </Button>
           )}

@@ -1,5 +1,5 @@
-import type { User } from "@supabase/supabase-js"
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import * as authService from "../../features/auth/services/authService"
 import { supabase } from "../../lib/supabase/client"
@@ -28,6 +28,8 @@ function roleHome(role?: UserRole | null) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const mountedRef = useRef(true)
+  const authRequestIdRef = useRef(0)
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [organization, setOrganization] = useState<Organization | null>(null)
@@ -35,8 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false)
 
   const loadUserData = useCallback(async (nextUser: User | null) => {
+    const requestId = ++authRequestIdRef.current
     setUser(nextUser)
+
     if (!nextUser) {
+      if (requestId !== authRequestIdRef.current) return null
       setProfile(null)
       setOrganization(null)
       setLoading(false)
@@ -47,10 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const nextProfile = await authService.getProfile(nextUser.id)
+      if (!mountedRef.current || requestId !== authRequestIdRef.current) return null
       setProfile(nextProfile)
 
       if (nextProfile?.organization_id) {
         const nextOrg = await authService.getOrganization(nextProfile.organization_id)
+        if (!mountedRef.current || requestId !== authRequestIdRef.current) return null
         setOrganization(nextOrg)
       } else {
         setOrganization(null)
@@ -58,45 +65,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return nextProfile
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes("Lock broken by another request")) {
+        return null
+      }
       console.error("Failed to load authenticated user data", error)
-      setProfile(null)
-      setOrganization(null)
+      if (requestId === authRequestIdRef.current) {
+        setProfile(null)
+        setOrganization(null)
+      }
       return null
     } finally {
-      setLoading(false)
+      if (requestId === authRequestIdRef.current) {
+        setLoading(false)
+      }
     }
   }, [])
 
-  useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      const { data, error } = await supabase.auth.getSession()
-      if (error) {
-        setLoading(false)
-        setInitialized(true)
+  const handleAuthStateChange = useCallback(
+    async (event: AuthChangeEvent, session: Session | null) => {
+      if (!mountedRef.current) return
+
+      const nextProfile = await loadUserData(session?.user ?? null)
+      if (!mountedRef.current) return
+
+      setInitialized(true)
+
+      if (!session?.user) {
+        if (event === "SIGNED_OUT") {
+          navigate("/login", { replace: true })
+        }
         return
       }
-      if (!mounted) return
-      await loadUserData(data.session?.user ?? null)
-      setInitialized(true)
-    })()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextProfile = await loadUserData(session?.user ?? null)
-      if (!session?.user) return
+      if (!nextProfile) {
+        return
+      }
 
-      if (!nextProfile?.organization_id) {
+      if (!nextProfile.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
         navigate(roleHome(nextProfile.role), { replace: true })
       }
+    },
+    [loadUserData, navigate],
+  )
+
+  useEffect(() => {
+    mountedRef.current = true
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      window.setTimeout(() => {
+        void handleAuthStateChange(event, session).catch((error) => {
+          console.error("Unhandled auth state change error", error)
+        })
+      }, 0)
     })
 
     return () => {
-      mounted = false
+      mountedRef.current = false
       subscription.subscription.unsubscribe()
     }
-  }, [loadUserData, navigate])
+  }, [handleAuthStateChange])
 
   const signIn = useCallback(async (email: string, password: string) => {
     setLoading(true)
@@ -121,8 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = useCallback(async () => {
     await authService.signOut()
-    navigate("/login", { replace: true })
-  }, [navigate])
+  }, [])
 
   const sendMagicLink = useCallback(async (email: string) => {
     await authService.signInWithMagicLink(email)
