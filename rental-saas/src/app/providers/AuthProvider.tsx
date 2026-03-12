@@ -7,7 +7,11 @@ import type { AuthState, Organization, UserProfile, UserRole } from "../../types
 
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, metadata: { full_name: string; role: UserRole }) => Promise<User>
+  signUp: (
+    email: string,
+    password: string,
+    metadata: { full_name: string; role: UserRole },
+  ) => Promise<authService.SignUpResult>
   signOut: () => Promise<void>
   sendMagicLink: (email: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -36,20 +40,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null)
       setOrganization(null)
       setLoading(false)
-      return
+      return null
     }
 
     setLoading(true)
-    const nextProfile = await authService.getProfile(nextUser.id)
-    setProfile(nextProfile)
 
-    if (nextProfile?.organization_id) {
-      const nextOrg = await authService.getOrganization(nextProfile.organization_id)
-      setOrganization(nextOrg)
-    } else {
+    try {
+      const nextProfile = await authService.getProfile(nextUser.id)
+      setProfile(nextProfile)
+
+      if (nextProfile?.organization_id) {
+        const nextOrg = await authService.getOrganization(nextProfile.organization_id)
+        setOrganization(nextOrg)
+      } else {
+        setOrganization(null)
+      }
+
+      return nextProfile
+    } catch (error) {
+      console.error("Failed to load authenticated user data", error)
+      setProfile(null)
       setOrganization(null)
+      return null
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -67,9 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })()
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      await loadUserData(session?.user ?? null)
+      const nextProfile = await loadUserData(session?.user ?? null)
       if (!session?.user) return
-      const nextProfile = await authService.getProfile(session.user.id)
+
       if (!nextProfile?.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
@@ -85,16 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     setLoading(true)
-    await authService.signInWithEmail(email, password)
-    setLoading(false)
+    try {
+      await authService.signInWithEmail(email, password)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   const signUp = useCallback(
     async (email: string, password: string, metadata: { full_name: string; role: UserRole }) => {
       setLoading(true)
-      const createdUser = await authService.signUpWithEmail(email, password, metadata)
-      setLoading(false)
-      return createdUser
+      try {
+        return await authService.signUpWithEmail(email, password, metadata)
+      } finally {
+        setLoading(false)
+      }
     },
     [],
   )

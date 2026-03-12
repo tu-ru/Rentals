@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs"
+import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const passwordSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -25,6 +26,7 @@ type MagicValues = z.infer<typeof magicSchema>
 export function LoginForm() {
   const { signIn, sendMagicLink, loading } = useAuth()
   const [magicSent, setMagicSent] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   const passwordForm = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema) })
   const magicForm = useForm<MagicValues>({ resolver: zodResolver(magicSchema) })
@@ -38,7 +40,15 @@ export function LoginForm() {
         </TabsList>
 
         <TabsContent value="password">
-          <form className="space-y-4" onSubmit={passwordForm.handleSubmit((values) => signIn(values.email, values.password))}>
+          <form
+            className="space-y-4"
+            onSubmit={passwordForm.handleSubmit(async (values) => {
+              setAuthError(null)
+              await signIn(values.email, values.password).catch((error: unknown) => {
+                setAuthError(handleSupabaseError(error))
+              })
+            })}
+          >
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" {...passwordForm.register("email")} />
@@ -52,6 +62,7 @@ export function LoginForm() {
             <Button className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+            {authError && <p className="text-sm text-red-500">{authError}</p>}
           </form>
         </TabsContent>
 
@@ -59,8 +70,13 @@ export function LoginForm() {
           <form
             className="space-y-4"
             onSubmit={magicForm.handleSubmit(async (values) => {
+              setAuthError(null)
+              setMagicSent(false)
               await sendMagicLink(values.email)
-              setMagicSent(true)
+                .then(() => setMagicSent(true))
+                .catch((error: unknown) => {
+                  setAuthError(handleSupabaseError(error))
+                })
             })}
           >
             <div className="space-y-2">
@@ -71,6 +87,7 @@ export function LoginForm() {
             <Button className="w-full" disabled={loading}>
               Send Magic Link
             </Button>
+            {authError && <p className="text-sm text-red-500">{authError}</p>}
             <AnimatePresence>
               {magicSent && (
                 <motion.p

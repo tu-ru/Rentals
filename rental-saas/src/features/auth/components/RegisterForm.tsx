@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
 import { z } from "zod"
@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Progress } from "../../../components/ui/progress"
+import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const schema = z
   .object({
@@ -26,12 +27,29 @@ const schema = z
   })
 
 type Values = z.infer<typeof schema>
+const SIGNUP_COOLDOWN_MS = 60_000
+
+function isRateLimitError(error: unknown): boolean {
+  const maybeError = error as { status?: number; message?: string }
+  return maybeError.status === 429 || (maybeError.message ?? "").toLowerCase().includes("too many requests")
+}
 
 export function RegisterForm() {
   const navigate = useNavigate()
   const { signUp } = useAuth()
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isRateLimited, setIsRateLimited] = useState(false)
+  const cooldownTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        window.clearTimeout(cooldownTimerRef.current)
+      }
+    }
+  }, [])
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -39,22 +57,45 @@ export function RegisterForm() {
   })
 
   const submit = form.handleSubmit(async (values) => {
+    if (isRateLimited) {
+      setSubmitError("Too many attempts. Please wait a minute, then try again.")
+      return
+    }
+
     setSubmitting(true)
-    const user = await signUp(values.email, values.password, {
-      full_name: values.full_name,
-      role: values.role,
-    })
+    setSubmitError(null)
+    try {
+      const { user, session } = await signUp(values.email, values.password, {
+        full_name: values.full_name,
+        role: values.role,
+      })
 
-    const organization = await authService.createOrganization(values.organization_name, user.id)
-    await authService.updateProfile(user.id, {
-      full_name: values.full_name,
-      phone: values.phone,
-      organization_id: organization.id,
-      role: values.role,
-    })
+      if (!session) {
+        setSubmitError("Account created. Please confirm your email, then sign in to finish setup.")
+        return
+      }
 
-    setSubmitting(false)
-    navigate("/onboarding", { replace: true })
+      const organization = await authService.createOrganization(values.organization_name, user.id)
+      await authService.updateProfile(user.id, {
+        full_name: values.full_name,
+        phone: values.phone,
+        organization_id: organization.id,
+        role: values.role,
+      })
+
+      navigate("/onboarding", { replace: true })
+    } catch (error) {
+      if (isRateLimitError(error)) {
+        setIsRateLimited(true)
+        cooldownTimerRef.current = window.setTimeout(() => {
+          setIsRateLimited(false)
+          cooldownTimerRef.current = null
+        }, SIGNUP_COOLDOWN_MS)
+      }
+      setSubmitError(handleSupabaseError(error))
+    } finally {
+      setSubmitting(false)
+    }
   })
 
   return (
@@ -122,9 +163,12 @@ export function RegisterForm() {
             Next
           </Button>
         ) : (
-          <Button disabled={submitting}>{submitting ? "Creating account..." : "Create account"}</Button>
+          <Button disabled={submitting || isRateLimited}>
+            {submitting ? "Creating account..." : "Create account"}
+          </Button>
         )}
       </div>
+      {submitError && <p className="text-sm text-red-500">{submitError}</p>}
     </form>
   )
 }

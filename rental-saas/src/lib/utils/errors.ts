@@ -5,6 +5,10 @@ export function handleSupabaseError(error: unknown): string {
   const code = maybeError.code
   const message = maybeError.message ?? ""
 
+  if (maybeError.status === 429 || message.toLowerCase().includes("too many requests")) {
+    return "Too many attempts. Please wait a minute, then try again."
+  }
+
   if (code === "23505") return "This record already exists"
   if (code === "23503") return "Related record not found"
   if (code === "42501") return "You don't have permission to do this"
