@@ -12,10 +12,11 @@ import type {
 
 async function requireOrganizationId(): Promise<string> {
   const {
-    data: { user },
+    data: { session },
     error: authError,
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getSession()
   if (authError) throw authError
+  const user = session?.user
   if (!user) throw new Error("Not authenticated")
 
   const { data, error } = await supabase.from("profiles").select("organization_id").eq("id", user.id).single()
