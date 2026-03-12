@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Progress } from "../../../components/ui/progress"
+import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const schema = z
   .object({
@@ -32,6 +33,7 @@ export function RegisterForm() {
   const { signUp } = useAuth()
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -40,21 +42,27 @@ export function RegisterForm() {
 
   const submit = form.handleSubmit(async (values) => {
     setSubmitting(true)
-    const user = await signUp(values.email, values.password, {
-      full_name: values.full_name,
-      role: values.role,
-    })
+    setSubmitError(null)
+    try {
+      const user = await signUp(values.email, values.password, {
+        full_name: values.full_name,
+        role: values.role,
+      })
 
-    const organization = await authService.createOrganization(values.organization_name, user.id)
-    await authService.updateProfile(user.id, {
-      full_name: values.full_name,
-      phone: values.phone,
-      organization_id: organization.id,
-      role: values.role,
-    })
+      const organization = await authService.createOrganization(values.organization_name, user.id)
+      await authService.updateProfile(user.id, {
+        full_name: values.full_name,
+        phone: values.phone,
+        organization_id: organization.id,
+        role: values.role,
+      })
 
-    setSubmitting(false)
-    navigate("/onboarding", { replace: true })
+      navigate("/onboarding", { replace: true })
+    } catch (error) {
+      setSubmitError(handleSupabaseError(error))
+    } finally {
+      setSubmitting(false)
+    }
   })
 
   return (
@@ -125,6 +133,7 @@ export function RegisterForm() {
           <Button disabled={submitting}>{submitting ? "Creating account..." : "Create account"}</Button>
         )}
       </div>
+      {submitError && <p className="text-sm text-red-500">{submitError}</p>}
     </form>
   )
 }
