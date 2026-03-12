@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (!nextProfile?.organization_id) {
+      if (!nextProfile.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
         navigate(roleHome(nextProfile.role), { replace: true })
