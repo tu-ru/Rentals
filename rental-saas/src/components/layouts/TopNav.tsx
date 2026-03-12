@@ -17,6 +17,14 @@ interface TopNavProps {
 export function TopNav({ title, breadcrumb }: TopNavProps) {
   const { profile, signOut } = useAuth()
 
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error("Failed to sign out from top navigation", error)
+    }
+  }
+
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
       <div className="flex h-16 items-center justify-between px-6">
@@ -42,7 +50,7 @@ export function TopNav({ title, breadcrumb }: TopNavProps) {
                 <DropdownMenuItem>{profile?.full_name ?? "User"}</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void signOut()}>Logout</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void handleSignOut()}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
