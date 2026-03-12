@@ -16,10 +16,11 @@ interface RequestFilters {
 
 async function getMyOrgId() {
   const {
-    data: { user },
+    data: { session },
     error,
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getSession()
   if (error) throw error
+  const user = session?.user
   if (!user) throw new Error("Not authenticated")
 
   const { data, error: profileError } = await supabase.from("profiles").select("organization_id").eq("id", user.id).single()
