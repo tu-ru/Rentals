@@ -11,6 +11,7 @@ import { LandingPage } from "../../pages/LandingPage"
 import { NotFoundPage } from "../../pages/NotFound"
 import { DashboardHomePage } from "../../pages/dashboard/DashboardHomePage"
 import { PropertiesPage } from "../../pages/dashboard/PropertiesPage"
+import { PropertyDetailPage } from "../../pages/dashboard/PropertyDetailPage"
 import { TenantsPage } from "../../pages/dashboard/TenantsPage"
 import { LeasesPage } from "../../pages/dashboard/LeasesPage"
 import { PaymentsPage } from "../../pages/dashboard/PaymentsPage"
@@ -83,6 +84,7 @@ export function AppRouter() {
       >
         <Route index element={<DashboardHomePage />} />
         <Route path="properties" element={<PropertiesPage />} />
+        <Route path="properties/:id" element={<PropertyDetailPage />} />
         <Route path="tenants" element={<TenantsPage />} />
         <Route path="leases" element={<LeasesPage />} />
         <Route path="payments" element={<PaymentsPage />} />

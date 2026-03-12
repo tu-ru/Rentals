@@ -1,1 +1,1 @@
-export {}
+export * from "./property.types"
