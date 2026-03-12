@@ -1,0 +1,10 @@
+CREATE TYPE user_role AS ENUM ('admin', 'landlord', 'agent', 'tenant');
+CREATE TYPE property_type AS ENUM ('apartment', 'house', 'commercial', 'bedsitter', 'single_room', 'studio');
+CREATE TYPE unit_status AS ENUM ('vacant', 'occupied', 'maintenance', 'reserved');
+CREATE TYPE lease_status AS ENUM ('active', 'expired', 'terminated', 'pending');
+CREATE TYPE payment_method AS ENUM ('mpesa', 'bank_transfer', 'cash', 'cheque');
+CREATE TYPE payment_status AS ENUM ('pending', 'confirmed', 'failed', 'reconciled');
+CREATE TYPE invoice_status AS ENUM ('draft', 'sent', 'paid', 'overdue', 'cancelled');
+CREATE TYPE maintenance_status AS ENUM ('open', 'assigned', 'in_progress', 'resolved', 'closed');
+CREATE TYPE maintenance_priority AS ENUM ('low', 'medium', 'high', 'emergency');
+CREATE TYPE notification_type AS ENUM ('rent_reminder', 'payment_confirmed', 'maintenance_update', 'lease_expiry', 'general');
