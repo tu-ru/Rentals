@@ -44,10 +44,15 @@ export function RegisterForm() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const user = await signUp(values.email, values.password, {
+      const { user, session } = await signUp(values.email, values.password, {
         full_name: values.full_name,
         role: values.role,
       })
+
+      if (!session) {
+        setSubmitError("Account created. Please confirm your email, then sign in to finish setup.")
+        return
+      }
 
       const organization = await authService.createOrganization(values.organization_name, user.id)
       await authService.updateProfile(user.id, {

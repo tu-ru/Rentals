@@ -2,6 +2,11 @@ import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "../../../lib/supabase/client"
 import type { Organization, UserProfile, UserRole } from "../../../types/auth.types"
 
+export interface SignUpResult {
+  user: User
+  session: Session | null
+}
+
 export async function signInWithEmail(email: string, password: string): Promise<Session> {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) throw error
@@ -13,7 +18,7 @@ export async function signUpWithEmail(
   email: string,
   password: string,
   metadata: { full_name: string; role: UserRole },
-): Promise<User> {
+): Promise<SignUpResult> {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -23,7 +28,7 @@ export async function signUpWithEmail(
   })
   if (error) throw error
   if (!data.user) throw new Error("User signup failed")
-  return data.user
+  return { user: data.user, session: data.session }
 }
 
 export async function signInWithMagicLink(email: string): Promise<void> {

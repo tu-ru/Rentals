@@ -7,7 +7,11 @@ import type { AuthState, Organization, UserProfile, UserRole } from "../../types
 
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, metadata: { full_name: string; role: UserRole }) => Promise<User>
+  signUp: (
+    email: string,
+    password: string,
+    metadata: { full_name: string; role: UserRole },
+  ) => Promise<authService.SignUpResult>
   signOut: () => Promise<void>
   sendMagicLink: (email: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -107,8 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string, metadata: { full_name: string; role: UserRole }) => {
       setLoading(true)
       try {
-        const createdUser = await authService.signUpWithEmail(email, password, metadata)
-        return createdUser
+        return await authService.signUpWithEmail(email, password, metadata)
       } finally {
         setLoading(false)
       }
