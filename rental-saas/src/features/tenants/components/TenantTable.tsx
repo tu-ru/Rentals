@@ -1,10 +1,12 @@
 import { type ColumnDef } from "@tanstack/react-table"
+import { useState } from "react"
 import { DataTable } from "../../../components/shared/DataTable"
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { formatKES } from "../../../lib/utils/format"
 import type { TenantRow } from "../types"
+import { SendSmsDialog } from "./SendSmsDialog"
 
 export function TenantTable({
   tenants,
@@ -19,6 +21,8 @@ export function TenantTable({
   onEdit: (tenant: TenantRow) => void
   onToggleActive: (tenant: TenantRow) => void
 }) {
+  const [smsTenant, setSmsTenant] = useState<TenantRow | null>(null)
+
   const columns: ColumnDef<TenantRow>[] = [
     {
       accessorKey: "full_name",
@@ -70,7 +74,7 @@ export function TenantTable({
       cell: ({ row }) => (
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => onView(row.original)}>View Profile</Button>
-          <Button size="sm" variant="outline" onClick={() => alert("SMS dialog not yet integrated")}>Send SMS</Button>
+          <Button size="sm" variant="outline" onClick={() => setSmsTenant(row.original)}>Send SMS</Button>
           <Button size="sm" variant="outline" onClick={() => onEdit(row.original)}>Edit</Button>
           <Button size="sm" variant="outline" onClick={() => onToggleActive(row.original)}>
             {row.original.is_active ? "Deactivate" : "Reactivate"}
@@ -80,5 +84,14 @@ export function TenantTable({
     },
   ]
 
-  return <DataTable columns={columns} data={tenants} loading={loading} searchKey="full_name" searchPlaceholder="Search by name or phone" />
+  return (
+    <>
+      <DataTable columns={columns} data={tenants} loading={loading} searchKey="full_name" searchPlaceholder="Search by name or phone" />
+      <SendSmsDialog
+        open={Boolean(smsTenant)}
+        onOpenChange={(open) => !open && setSmsTenant(null)}
+        tenant={smsTenant ? { full_name: smsTenant.full_name, phone: smsTenant.phone } : undefined}
+      />
+    </>
+  )
 }

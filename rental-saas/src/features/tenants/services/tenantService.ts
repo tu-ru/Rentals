@@ -26,10 +26,16 @@ function makeInvoiceNumber() {
   return `INV-${yyyy}${mm}-${random}`
 }
 
+function extractProfileEmail(profileRow: { metadata?: Record<string, unknown> | null }): string | null {
+  const metadata = profileRow.metadata ?? {}
+  const email = metadata.email
+  return typeof email === "string" && email.trim().length > 0 ? email : null
+}
+
 export async function getTenants(organizationId: string): Promise<TenantRow[]> {
   const { data: tenants, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, national_id, avatar_url, is_active, role, created_at")
+    .select("id, full_name, phone, national_id, avatar_url, is_active, role, created_at, metadata")
     .eq("organization_id", organizationId)
     .eq("role", "tenant")
     .order("created_at", { ascending: false })
@@ -37,8 +43,7 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
 
   const tenantIds = (tenants ?? []).map((tenant) => tenant.id)
 
-  const [{ data: usersData }, { data: activeLeases }, { data: invoiceBalances }] = await Promise.all([
-    supabase.auth.getUser(),
+  const [{ data: activeLeases }, { data: invoiceBalances }] = await Promise.all([
     tenantIds.length
       ? supabase
           .from("leases")
@@ -55,11 +60,6 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
       : Promise.resolve({ data: [] as any[] }),
   ])
 
-  const emailById = new Map<string, string>()
-  if (usersData?.user?.id) {
-    emailById.set(usersData.user.id, usersData.user.email ?? "")
-  }
-
   const activeByTenant = new Map<string, any>()
   for (const lease of activeLeases ?? []) {
     if (!activeByTenant.has(lease.tenant_id)) activeByTenant.set(lease.tenant_id, lease)
@@ -75,7 +75,7 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
     return {
       ...tenant,
       role: "tenant",
-      email: emailById.get(tenant.id) ?? null,
+      email: extractProfileEmail(tenant),
       activeLease: activeLease
         ? {
             id: activeLease.id,
@@ -93,7 +93,7 @@ export async function getTenant(id: string): Promise<TenantDetails> {
   const { organizationId } = await getProfileContext()
   const { data: tenant, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, national_id, avatar_url, is_active, role, created_at")
+    .select("id, full_name, phone, national_id, avatar_url, is_active, role, created_at, metadata")
     .eq("organization_id", organizationId)
     .eq("role", "tenant")
     .eq("id", id)
@@ -129,7 +129,7 @@ export async function getTenant(id: string): Promise<TenantDetails> {
   return {
     ...(tenant as any),
     role: "tenant",
-    email: null,
+    email: extractProfileEmail(tenant),
     activeLease: activeLease
       ? {
           id: activeLease.id,
@@ -180,6 +180,7 @@ export async function inviteTenant(
     organization_id: organizationId,
     invited_unit_id: unitId ?? null,
     national_id: nationalId ?? null,
+    email,
   }
 
   const { error } = await supabase.auth.signInWithOtp({ email, options: { data: metadata } })
@@ -227,34 +228,36 @@ export async function createLease(data: LeaseFormInput): Promise<void> {
 
   const { data: created, error } = await supabase
     .from("leases")
-    .insert({ ...data, organization_id: organizationId, status: "active" })
-    .select("id, unit_id, tenant_id, monthly_rent")
+    .insert({ ...data, organization_id: organizationId, status: data.status })
+    .select("id, unit_id, tenant_id, monthly_rent, status")
     .single()
   if (error) throw error
 
-  const today = new Date()
-  const periodStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-  const dueDate = new Date(today.getFullYear(), today.getMonth(), 5)
+  if (created.status === "active") {
+    const today = new Date()
+    const periodStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    const dueDate = new Date(today.getFullYear(), today.getMonth(), 5)
 
-  const { error: invoiceError } = await supabase.from("invoices").insert({
-    organization_id: organizationId,
-    lease_id: created.id,
-    tenant_id: created.tenant_id,
-    unit_id: created.unit_id,
-    invoice_number: makeInvoiceNumber(),
-    amount_due: created.monthly_rent,
-    amount_paid: 0,
-    due_date: dueDate.toISOString().slice(0, 10),
-    period_start: periodStart.toISOString().slice(0, 10),
-    period_end: periodEnd.toISOString().slice(0, 10),
-    status: "sent",
-    line_items: [{ type: "rent", amount: created.monthly_rent }],
-  })
-  if (invoiceError) throw invoiceError
+    const { error: invoiceError } = await supabase.from("invoices").insert({
+      organization_id: organizationId,
+      lease_id: created.id,
+      tenant_id: created.tenant_id,
+      unit_id: created.unit_id,
+      invoice_number: makeInvoiceNumber(),
+      amount_due: created.monthly_rent,
+      amount_paid: 0,
+      due_date: dueDate.toISOString().slice(0, 10),
+      period_start: periodStart.toISOString().slice(0, 10),
+      period_end: periodEnd.toISOString().slice(0, 10),
+      status: "sent",
+      line_items: [{ type: "rent", amount: created.monthly_rent }],
+    })
+    if (invoiceError) throw invoiceError
 
-  const { error: unitError } = await supabase.from("units").update({ status: "occupied" }).eq("id", created.unit_id)
-  if (unitError) throw unitError
+    const { error: unitError } = await supabase.from("units").update({ status: "occupied" }).eq("id", created.unit_id)
+    if (unitError) throw unitError
+  }
 }
 
 export async function updateLease(id: string, data: Partial<LeaseFormInput>) {

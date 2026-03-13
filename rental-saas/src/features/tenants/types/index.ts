@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { kenyanPhone } from "../../../lib/utils/validators"
 
+export const leaseStatusValues = ["pending", "active", "expired", "terminated"] as const
+
 export const tenantInviteSchema = z.object({
   full_name: z.string().min(2),
   email: z.string().email(),
@@ -17,6 +19,7 @@ export const leaseSchema = z.object({
   monthly_rent: z.number().min(0),
   deposit_paid: z.number().min(0),
   terms: z.string().optional(),
+  status: z.enum(leaseStatusValues).default("pending"),
 })
 
 export type TenantInviteInput = z.infer<typeof tenantInviteSchema>

@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
         phone,
         national_id: nationalId ?? null,
         role: "tenant",
+        metadata: { email },
       })
       .eq("id", data.user.id)
 

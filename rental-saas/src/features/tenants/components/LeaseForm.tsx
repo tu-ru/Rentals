@@ -7,7 +7,7 @@ import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Select } from "../../../components/ui/select"
 import { useCreateLease, useTenants, useVacantUnits } from "../hooks"
-import { leaseSchema, type LeaseFormInput } from "../types"
+import { leaseSchema, leaseStatusValues, type LeaseFormInput } from "../types"
 
 export function LeaseForm({ open, onOpenChange, tenantId }: { open: boolean; onOpenChange: (open: boolean) => void; tenantId?: string }) {
   const createLease = useCreateLease()
@@ -24,6 +24,7 @@ export function LeaseForm({ open, onOpenChange, tenantId }: { open: boolean; onO
       monthly_rent: 0,
       deposit_paid: 0,
       terms: "",
+      status: "pending",
     } as any,
   })
 
@@ -69,6 +70,14 @@ export function LeaseForm({ open, onOpenChange, tenantId }: { open: boolean; onO
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monthly rent (KES)</Label><Input type="number" {...form.register("monthly_rent", { valueAsNumber: true })} /></div>
             <div><Label>Deposit paid</Label><Input type="number" {...form.register("deposit_paid", { valueAsNumber: true })} /></div>
+          </div>
+          <div>
+            <Label>Status</Label>
+            <Select {...form.register("status")}>
+              {leaseStatusValues.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </Select>
           </div>
           <div><Label>Terms</Label><textarea className="min-h-20 w-full rounded-md border p-2" {...form.register("terms")} /></div>
           <DialogFooter>
