@@ -37,4 +37,6 @@ export const QUERY_KEYS = {
   MESSAGES: "messages",
   NOTIFICATIONS: "notifications",
   REPORTS: "reports",
+  SETTINGS: "settings",
+  TEAM_MEMBERS: "team-members",
 } as const
