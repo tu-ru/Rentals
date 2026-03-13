@@ -47,6 +47,7 @@ export function RegisterForm() {
       const { user, session } = await signUp(values.email, values.password, {
         full_name: values.full_name,
         role: values.role,
+        organization_name: values.organization_name,
       })
 
       if (!session) {
@@ -106,6 +107,7 @@ export function RegisterForm() {
           <div>
             <Label>Organization name</Label>
             <Input {...form.register("organization_name")} />
+            <p className="text-xs text-muted-foreground">You can add your first property in onboarding after account creation.</p>
           </div>
           <div>
             <Label className="mb-2 block">Role</Label>

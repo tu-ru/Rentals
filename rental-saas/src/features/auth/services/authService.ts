@@ -17,7 +17,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 export async function signUpWithEmail(
   email: string,
   password: string,
-  metadata: { full_name: string; role: UserRole },
+  metadata: { full_name: string; role: UserRole; organization_name?: string },
 ): Promise<SignUpResult> {
   const { data, error } = await supabase.auth.signUp({
     email,

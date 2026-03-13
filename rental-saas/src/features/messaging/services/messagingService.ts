@@ -49,8 +49,11 @@ export async function getMessages(conversationId: string, limit = 50, before?: s
 
 export async function createConversation(title: string, memberIds: string[], organizationId: string, isGroup = false) {
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+  if (sessionError) throw sessionError
+  const user = session?.user
   if (!user) throw new Error("Not authenticated")
 
   const { data, error } = await supabase
