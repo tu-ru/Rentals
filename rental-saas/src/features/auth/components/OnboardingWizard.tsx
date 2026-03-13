@@ -29,7 +29,9 @@ export function OnboardingWizard() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const [organizationName, setOrganizationName] = useState(organization?.name ?? "")
+  const [organizationName, setOrganizationName] = useState(
+    organization?.name ?? (typeof user?.user_metadata?.organization_name === "string" ? user.user_metadata.organization_name : ""),
+  )
   const [mpesaShortcode, setMpesaShortcode] = useState(organization?.mpesa_shortcode ?? "")
   const [mpesaNominatedNumber, setMpesaNominatedNumber] = useState(organization?.mpesa_nominated_number ?? "")
   const [mpesaEnv, setMpesaEnv] = useState<"sandbox" | "production">(organization?.mpesa_env ?? "sandbox")

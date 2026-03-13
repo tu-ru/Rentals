@@ -10,7 +10,7 @@ interface AuthContextValue extends AuthState {
   signUp: (
     email: string,
     password: string,
-    metadata: { full_name: string; role: UserRole },
+    metadata: { full_name: string; role: UserRole; organization_name?: string },
   ) => Promise<authService.SignUpResult>
   signOut: () => Promise<void>
   sendMagicLink: (email: string) => Promise<void>
@@ -98,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      if (!nextProfile) {
+        return
+      }
+
       if (!nextProfile.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
@@ -134,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = useCallback(
-    async (email: string, password: string, metadata: { full_name: string; role: UserRole }) => {
+    async (email: string, password: string, metadata: { full_name: string; role: UserRole; organization_name?: string }) => {
       setLoading(true)
       try {
         return await authService.signUpWithEmail(email, password, metadata)
