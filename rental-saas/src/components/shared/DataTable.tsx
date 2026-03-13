@@ -21,6 +21,7 @@ interface DataTableProps<TData, TValue> {
   loading?: boolean
   searchKey?: string
   searchPlaceholder?: string
+  getRowClassName?: (row: TData) => string | undefined
 }
 
 export function DataTable<TData, TValue>({
@@ -29,6 +30,7 @@ export function DataTable<TData, TValue>({
   loading = false,
   searchKey,
   searchPlaceholder = "Search...",
+  getRowClassName,
 }: DataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [showColumns, setShowColumns] = useState(false)
@@ -106,7 +108,7 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 ))
               : table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} className={getRowClassName?.(row.original)}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
