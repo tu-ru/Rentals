@@ -2,6 +2,7 @@ import type { ReactElement } from "react"
 import { Navigate } from "react-router-dom"
 import type { UserRole } from "../../types/auth.types"
 import { useAuth } from "../providers"
+import { PageLoader } from "../../components/shared"
 import { PrivateRoute } from "./PrivateRoute"
 
 function fallback(role?: UserRole) {
@@ -11,11 +12,11 @@ function fallback(role?: UserRole) {
 }
 
 export function RoleRoute({ children, allowedRoles }: { children: ReactElement; allowedRoles: UserRole[] }) {
-  const { profile } = useAuth()
+  const { loading, profile } = useAuth()
 
   return (
     <PrivateRoute>
-      {profile && allowedRoles.includes(profile.role) ? children : <Navigate to={fallback(profile?.role)} replace />}
+      {loading ? <PageLoader /> : profile && allowedRoles.includes(profile.role) ? children : <Navigate to={fallback(profile?.role)} replace />}
     </PrivateRoute>
   )
 }

@@ -13,7 +13,10 @@ interface AuthContextValue extends AuthState {
     metadata: { full_name: string; role: UserRole; organization_name?: string },
   ) => Promise<authService.SignUpResult>
   signOut: () => Promise<void>
-  sendMagicLink: (email: string) => Promise<void>
+  sendMagicLink: (
+    email: string,
+    metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>,
+  ) => Promise<void>
   refreshProfile: () => Promise<void>
   setOrganization: (organization: Organization | null) => void
 }
@@ -24,6 +27,10 @@ function roleHome(role?: UserRole | null) {
   if (role === "tenant") return "/tenant"
   if (role === "agent") return "/agent"
   return "/dashboard"
+}
+
+function shouldRedirectFromAuthEvent(event: AuthChangeEvent) {
+  return event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "PASSWORD_RECOVERY"
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -98,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (!nextProfile) {
+      if (!nextProfile || !shouldRedirectFromAuthEvent(event)) {
         return
       }
 
@@ -153,9 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.signOut()
   }, [])
 
-  const sendMagicLink = useCallback(async (email: string) => {
-    await authService.signInWithMagicLink(email)
-  }, [])
+  const sendMagicLink = useCallback(
+    async (email: string, metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>) => {
+      await authService.signInWithMagicLink(email, metadata)
+    },
+    [],
+  )
 
   const refreshProfile = useCallback(async () => {
     if (!user) return

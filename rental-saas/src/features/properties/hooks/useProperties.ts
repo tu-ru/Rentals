@@ -112,8 +112,10 @@ export function useUpdateUnit() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data, propertyId }: { id: string; data: UpdateUnitInput; propertyId: string }) =>
-      propertyService.updateUnit(id, data),
+    mutationFn: ({ id, data, propertyId }: { id: string; data: UpdateUnitInput; propertyId: string }) => {
+      void propertyId
+      return propertyService.updateUnit(id, data)
+    },
     onSuccess: (_unit, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNITS, variables.propertyId] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROPERTIES] })
@@ -129,8 +131,10 @@ export function useUpdateUnitStatus() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, status, propertyId }: { id: string; status: Unit["status"]; propertyId: string }) =>
-      propertyService.updateUnitStatus(id, status),
+    mutationFn: ({ id, status, propertyId }: { id: string; status: Unit["status"]; propertyId: string }) => {
+      void propertyId
+      return propertyService.updateUnitStatus(id, status)
+    },
     onSuccess: (_unit, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNITS, variables.propertyId] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROPERTIES] })
