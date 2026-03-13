@@ -17,6 +17,7 @@ export const propertySchema = z.object({
   amenities: z.array(z.string()).default([]),
   images: z.array(z.string()).default([]),
   is_active: z.boolean().default(true),
+  estimated_monthly_revenue: z.number().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -34,6 +35,8 @@ export const unitSchema = z.object({
   size_sqft: z.number().min(0).nullable().optional(),
   features: z.array(z.string()).default([]),
   images: z.array(z.string()).default([]),
+  tenant_name: z.string().nullable().optional(),
+  tenant_id: z.string().uuid().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 })
@@ -57,7 +60,6 @@ export const createPropertySchema = z.object({
 
 export const createUnitSchema = z.object({
   property_id: z.string().uuid(),
-  organization_id: z.string().uuid(),
   unit_number: z.string().min(1),
   floor_number: z.number().int().nullable().optional(),
   unit_type: z.string().optional(),
@@ -74,7 +76,7 @@ export type Unit = z.infer<typeof unitSchema>
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>
 export type UpdatePropertyInput = Partial<CreatePropertyInput>
 export type CreateUnitInput = z.infer<typeof createUnitSchema>
-export type UpdateUnitInput = Partial<Omit<CreateUnitInput, "property_id" | "organization_id">>
+export type UpdateUnitInput = Partial<Omit<CreateUnitInput, "property_id">>
 
 export interface PropertyWithUnits extends Property {
   units: Unit[]

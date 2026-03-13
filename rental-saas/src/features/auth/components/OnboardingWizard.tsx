@@ -11,7 +11,7 @@ import * as authService from "../services/authService"
 import * as propertyService from "../../properties/services/propertyService"
 import { handleSupabaseError } from "../../../lib/utils/errors"
 
-const total = 4
+const total = 5
 
 type PropertyType = "apartment" | "house" | "commercial" | "bedsitter" | "single_room" | "studio"
 
@@ -23,11 +23,13 @@ function roleHome(role?: string | null) {
 
 export function OnboardingWizard() {
   const navigate = useNavigate()
-  const { user, profile, organization, refreshProfile } = useAuth()
+  const { user, profile, organization, refreshProfile, sendMagicLink } = useAuth()
   const [step, setStep] = useState(1)
   const [direction, setDirection] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [inviteEmail, setInviteEmail] = useState("")
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null)
 
   const [organizationName, setOrganizationName] = useState(
     organization?.name ?? (typeof user?.user_metadata?.organization_name === "string" ? user.user_metadata.organization_name : ""),
@@ -66,6 +68,27 @@ export function OnboardingWizard() {
     setSubmitError(null)
     setDirection(-1)
     setStep((s) => Math.max(1, s - 1))
+  }
+
+  const handleTenantInvite = async () => {
+    if (!inviteEmail.trim()) return
+
+    setSubmitting(true)
+    setSubmitError(null)
+    setInviteStatus(null)
+
+    try {
+      await sendMagicLink(inviteEmail.trim(), {
+        role: "tenant",
+        organization_id: profile?.organization_id ?? organization?.id,
+      })
+      setInviteStatus("Invite link sent successfully.")
+      setInviteEmail("")
+    } catch (error) {
+      setSubmitError(handleSupabaseError(error))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const finishOnboarding = async () => {
@@ -227,6 +250,26 @@ export function OnboardingWizard() {
           )}
 
           {step === 4 && (
+            <>
+              <h3 className="text-lg font-semibold">Invite your first tenant</h3>
+              <p className="text-sm text-muted-foreground">Send a magic link invite so a tenant can access their portal.</p>
+              <div>
+                <Label>Tenant email</Label>
+                <Input
+                  type="email"
+                  placeholder="tenant@example.com"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                />
+              </div>
+              <Button type="button" variant="outline" disabled={submitting || !inviteEmail.trim()} onClick={() => void handleTenantInvite()}>
+                {submitting ? "Sending invite..." : "Send tenant invite"}
+              </Button>
+              {inviteStatus && <p className="text-sm text-emerald-600">{inviteStatus}</p>}
+            </>
+          )}
+
+          {step === 5 && (
             <>
               <h3 className="text-lg font-semibold">You&apos;re all set</h3>
               <p className="text-sm text-muted-foreground">Your workspace is ready. Continue to your dashboard.</p>

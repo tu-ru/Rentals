@@ -31,8 +31,14 @@ export async function signUpWithEmail(
   return { user: data.user, session: data.session }
 }
 
-export async function signInWithMagicLink(email: string): Promise<void> {
-  const { error } = await supabase.auth.signInWithOtp({ email })
+export async function signInWithMagicLink(
+  email: string,
+  metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>,
+): Promise<void> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: metadata ? { data: metadata } : undefined,
+  })
   if (error) throw error
 }
 

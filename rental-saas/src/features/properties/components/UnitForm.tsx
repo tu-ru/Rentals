@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { createUnitSchema, type CreateUnitInput, type Unit } from "../types/property.types"
 import { useAuth } from "../../../app/providers"
 import { useCreateUnit, useUpdateUnit } from "../hooks/useProperties"
+import * as propertyService from "../services/propertyService"
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
 import { Input } from "../../../components/ui/input"
@@ -23,21 +24,25 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
   const createMutation = useCreateUnit()
   const updateMutation = useUpdateUnit()
   const [features, setFeatures] = useState<string[]>(unit?.features ?? [])
+  const [images, setImages] = useState<string[]>(unit?.images ?? [])
+  const [imageFiles, setImageFiles] = useState<File[]>([])
   const isEdit = Boolean(unit)
 
-  const defaults = useMemo<CreateUnitInput>(() => ({
-    property_id: propertyId,
-    organization_id: profile?.organization_id ?? "",
-    unit_number: unit?.unit_number ?? "",
-    floor_number: unit?.floor_number ?? null,
-    unit_type: unit?.unit_type ?? "",
-    status: unit?.status ?? "vacant",
-    rent_amount: Number(unit?.rent_amount ?? 0),
-    deposit_amount: Number(unit?.deposit_amount ?? 0),
-    size_sqft: unit?.size_sqft ?? null,
-    features: unit?.features ?? [],
-    images: unit?.images ?? [],
-  }), [propertyId, profile?.organization_id, unit])
+  const defaults = useMemo<CreateUnitInput>(
+    () => ({
+      property_id: propertyId,
+      unit_number: unit?.unit_number ?? "",
+      floor_number: unit?.floor_number ?? null,
+      unit_type: unit?.unit_type ?? "",
+      status: unit?.status ?? "vacant",
+      rent_amount: Number(unit?.rent_amount ?? 0),
+      deposit_amount: Number(unit?.deposit_amount ?? 0),
+      size_sqft: unit?.size_sqft ?? null,
+      features: unit?.features ?? [],
+      images: unit?.images ?? [],
+    }),
+    [propertyId, unit],
+  )
 
   const form = useForm<CreateUnitInput>({
     resolver: zodResolver(createUnitSchema),
@@ -47,12 +52,19 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
   useEffect(() => {
     form.reset(defaults)
     setFeatures(defaults.features ?? [])
+    setImages(defaults.images ?? [])
+    setImageFiles([])
   }, [defaults, form])
 
   const loading = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const payload = { ...values, property_id: propertyId, organization_id: profile?.organization_id as string, features }
+    let uploadedImageUrls: string[] = []
+    if (imageFiles.length > 0 && profile?.organization_id) {
+      uploadedImageUrls = await propertyService.uploadUnitImages(profile.organization_id, imageFiles)
+    }
+
+    const payload = { ...values, property_id: propertyId, features, images: [...images, ...uploadedImageUrls] }
     if (isEdit && unit) {
       await updateMutation.mutateAsync({ id: unit.id, data: payload, propertyId })
     } else {
@@ -118,8 +130,34 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
             </div>
           </div>
 
+          <div>
+            <Label>Unit image gallery</Label>
+            <Input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
+            />
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {images.map((image) => (
+                <div key={image} className="relative overflow-hidden rounded border">
+                  <img src={image} alt="Unit" className="h-16 w-full object-cover" />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 rounded bg-black/60 px-1 text-xs text-white"
+                    onClick={() => setImages((prev) => prev.filter((url) => url !== image))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button disabled={loading}>{loading ? "Saving..." : isEdit ? "Update unit" : "Create unit"}</Button>
           </DialogFooter>
         </form>

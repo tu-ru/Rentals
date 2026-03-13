@@ -21,8 +21,9 @@ export function TenantMessagesPage() {
         .limit(1)
 
       const target = staff?.[0]?.id
-      if (!target) return
-      const conversation = await getOrCreateDirectConversation(profile.id, target, profile.organization_id)
+      const organizationId = profile.organization_id
+      if (!target || !organizationId) return
+      const conversation = await getOrCreateDirectConversation(profile.id, target, organizationId)
       setConversationId(conversation.id)
     })()
   }, [profile?.id, profile?.organization_id, profile?.role])

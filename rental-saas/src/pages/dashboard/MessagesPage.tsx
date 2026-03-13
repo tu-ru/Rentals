@@ -2,7 +2,6 @@ import { useMemo, useState } from "react"
 import { DashboardLayout } from "../../components/layouts"
 import { ChatWindow, ConversationList, NewConversationDialog } from "../../features/messaging/components"
 import { useConversations } from "../../features/messaging/hooks"
-import { useAuth } from "../../app/providers"
 
 export function MessagesPage() {
   const { data: conversations = [] } = useConversations()
