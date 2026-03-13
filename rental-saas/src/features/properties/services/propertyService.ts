@@ -60,6 +60,11 @@ export async function uploadPropertyImages(organizationId: string, files: File[]
   return urls
 }
 
+
+export async function uploadUnitImages(organizationId: string, files: File[]): Promise<string[]> {
+  return uploadPropertyImages(organizationId, files)
+}
+
 export async function getProperties(organizationId: string): Promise<Property[]> {
   const { data, error } = await supabase
     .from("properties")

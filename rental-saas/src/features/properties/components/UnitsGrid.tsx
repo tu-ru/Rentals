@@ -69,7 +69,7 @@ export function UnitsGrid({
               >
                 <option value="vacant">Vacant</option>
                 <option value="occupied">Occupied</option>
-                <option value="maintenance">Maintenance</option>
+                <option value="maintenance">Under Maintenance</option>
                 <option value="reserved">Reserved</option>
               </Select>
             </div>
