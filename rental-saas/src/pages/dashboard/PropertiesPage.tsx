@@ -24,14 +24,19 @@ export function PropertiesPage() {
         <PageHeader
           title="Properties"
           subtitle="Manage all properties and track occupancy"
-          actions={<Button onClick={() => setCreateOpen(true)}><Plus className="mr-2 h-4 w-4" />Add Property</Button>}
+          actions={
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />Add Property
+            </Button>
+          }
         />
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard title="Total Properties" value={stats?.totalProperties ?? 0} icon={Building2} />
           <StatCard title="Total Units" value={stats?.totalUnits ?? 0} icon={Building2} />
           <StatCard title="Occupied" value={stats?.occupiedUnits ?? 0} icon={Building2} />
           <StatCard title="Vacant" value={stats?.vacantUnits ?? 0} icon={Building2} />
+          <StatCard title="Occupancy Rate" value={stats?.occupancyRate ?? 0} subtitle="% occupied" icon={Building2} />
         </section>
 
         {isLoading ? (
@@ -59,14 +64,22 @@ export function PropertiesPage() {
                 property={property}
                 onView={() => navigate(`/dashboard/properties/${property.id}`)}
                 onEdit={() => setEditProperty(property)}
-                onDelete={() => deleteMutation.mutate(property.id)}
+                onDelete={() => {
+                  const confirmed = window.confirm(`Delete ${property.name}? This cannot be undone.`)
+                  if (!confirmed) return
+                  deleteMutation.mutate(property.id)
+                }}
               />
             ))}
           </div>
         )}
 
         <PropertyForm open={createOpen} onOpenChange={setCreateOpen} />
-        <PropertyForm open={Boolean(editProperty)} onOpenChange={(open) => !open && setEditProperty(null)} property={editProperty ?? undefined} />
+        <PropertyForm
+          open={Boolean(editProperty)}
+          onOpenChange={(open) => !open && setEditProperty(null)}
+          property={editProperty ?? undefined}
+        />
       </div>
     </DashboardLayout>
   )

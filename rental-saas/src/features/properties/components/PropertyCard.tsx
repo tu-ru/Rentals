@@ -1,7 +1,7 @@
 import { motion } from "framer-motion"
 import { Building2, MapPin } from "lucide-react"
 import { formatKES } from "../../../lib/utils/format"
-import type { Property, Unit } from "../types/property.types"
+import type { Property } from "../types/property.types"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../../components/ui/card"
@@ -9,22 +9,20 @@ import { Progress } from "../../../components/ui/progress"
 
 interface PropertyCardProps {
   property: Property
-  units?: Unit[]
   onView: () => void
   onEdit: () => void
   onDelete: () => void
 }
 
-export function PropertyCard({ property, units = [], onView, onEdit, onDelete }: PropertyCardProps) {
-  const occupied = units.filter((unit) => unit.status === "occupied")
-  const monthlyRevenue = occupied.reduce((sum, unit) => sum + Number(unit.rent_amount ?? 0), 0)
-  const totalUnits = Math.max(property.total_units, units.length)
-  const occupiedUnits = occupied.length || property.occupied_units
+export function PropertyCard({ property, onView, onEdit, onDelete }: PropertyCardProps) {
+  const totalUnits = property.total_units
+  const occupiedUnits = property.occupied_units
   const occupancy = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0
+  const monthlyRevenue = Number(property.estimated_monthly_revenue ?? 0)
 
   return (
-    <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.15 }}>
-      <Card className="overflow-hidden hover:shadow-lg">
+    <motion.div whileHover={{ y: -2, boxShadow: "0 14px 30px rgba(0,0,0,0.12)" }} transition={{ duration: 0.2 }}>
+      <Card className="overflow-hidden">
         <div className="flex h-44 items-center justify-center bg-muted">
           {property.images?.[0] ? (
             <img src={property.images[0]} alt={property.name} className="h-full w-full object-cover" />
@@ -60,9 +58,15 @@ export function PropertyCard({ property, units = [], onView, onEdit, onDelete }:
         </CardContent>
 
         <CardFooter className="gap-2">
-          <Button variant="outline" size="sm" onClick={onView}>View</Button>
-          <Button variant="outline" size="sm" onClick={onEdit}>Edit</Button>
-          <Button variant="destructive" size="sm" onClick={onDelete}>Delete</Button>
+          <Button variant="outline" size="sm" onClick={onView}>
+            View
+          </Button>
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            Edit
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onDelete}>
+            Delete
+          </Button>
         </CardFooter>
       </Card>
     </motion.div>

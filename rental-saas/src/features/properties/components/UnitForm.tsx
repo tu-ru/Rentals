@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createUnitSchema, type CreateUnitInput, type Unit } from "../types/property.types"
-import { useAuth } from "../../../app/providers"
 import { useCreateUnit, useUpdateUnit } from "../hooks/useProperties"
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
@@ -19,25 +18,26 @@ interface UnitFormProps {
 const FEATURE_TAGS = ["Balcony", "Ensuite", "Parking", "Water Included", "Furnished", "WiFi Ready"]
 
 export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps) {
-  const { profile } = useAuth()
   const createMutation = useCreateUnit()
   const updateMutation = useUpdateUnit()
   const [features, setFeatures] = useState<string[]>(unit?.features ?? [])
   const isEdit = Boolean(unit)
 
-  const defaults = useMemo<CreateUnitInput>(() => ({
-    property_id: propertyId,
-    organization_id: profile?.organization_id ?? "",
-    unit_number: unit?.unit_number ?? "",
-    floor_number: unit?.floor_number ?? null,
-    unit_type: unit?.unit_type ?? "",
-    status: unit?.status ?? "vacant",
-    rent_amount: Number(unit?.rent_amount ?? 0),
-    deposit_amount: Number(unit?.deposit_amount ?? 0),
-    size_sqft: unit?.size_sqft ?? null,
-    features: unit?.features ?? [],
-    images: unit?.images ?? [],
-  }), [propertyId, profile?.organization_id, unit])
+  const defaults = useMemo<CreateUnitInput>(
+    () => ({
+      property_id: propertyId,
+      unit_number: unit?.unit_number ?? "",
+      floor_number: unit?.floor_number ?? null,
+      unit_type: unit?.unit_type ?? "",
+      status: unit?.status ?? "vacant",
+      rent_amount: Number(unit?.rent_amount ?? 0),
+      deposit_amount: Number(unit?.deposit_amount ?? 0),
+      size_sqft: unit?.size_sqft ?? null,
+      features: unit?.features ?? [],
+      images: unit?.images ?? [],
+    }),
+    [propertyId, unit],
+  )
 
   const form = useForm<CreateUnitInput>({
     resolver: zodResolver(createUnitSchema),
@@ -52,7 +52,7 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
   const loading = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const payload = { ...values, property_id: propertyId, organization_id: profile?.organization_id as string, features }
+    const payload = { ...values, property_id: propertyId, features }
     if (isEdit && unit) {
       await updateMutation.mutateAsync({ id: unit.id, data: payload, propertyId })
     } else {
@@ -119,7 +119,9 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
             <Button disabled={loading}>{loading ? "Saving..." : isEdit ? "Update unit" : "Create unit"}</Button>
           </DialogFooter>
         </form>
