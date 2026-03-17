@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  const serviceSecret = Deno.env.get("SERVICE_SECRET") ?? ""
 
   const admin = createClient(supabaseUrl, serviceRoleKey)
 
@@ -43,6 +44,48 @@ Deno.serve(async (req) => {
 
     if (profileError) {
       return new Response(JSON.stringify({ error: profileError.message }), { status: 400 })
+    }
+
+    try {
+      const { data: org } = await admin
+        .from("organizations")
+        .select("id, name, mpesa_shortcode, settings")
+        .eq("id", organizationId)
+        .single()
+
+      const automation = (org?.settings?.sms_automation ?? {}) as Record<string, any>
+      if (automation.welcome !== false && serviceSecret) {
+        const unit = unitId
+          ? (await admin
+              .from("units")
+              .select("unit_number, rent_amount, property:properties(name)")
+              .eq("id", unitId)
+              .maybeSingle()).data
+          : null
+
+        await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Service-Secret": serviceSecret,
+          },
+          body: JSON.stringify({
+            organization_id: organizationId,
+            tenant_id: data.user.id,
+            message_type: "welcome",
+            template_variables: {
+              tenant_name: name,
+              property_name: unit?.property?.name ?? "",
+              unit_number: unit?.unit_number ?? "",
+              amount: unit?.rent_amount ? `KES ${unit.rent_amount}` : "",
+              paybill: org?.mpesa_shortcode ?? "",
+            },
+            is_automated: true,
+          }),
+        })
+      }
+    } catch {
+      // Avoid failing tenant invites if SMS fails
     }
   }
 

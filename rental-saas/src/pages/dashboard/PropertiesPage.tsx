@@ -1,6 +1,5 @@
 import { Building2, Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { DashboardLayout } from "../../components/layouts"
 import { EmptyState, PageHeader, StatCard } from "../../components/shared"
 import { Button } from "../../components/ui/button"
 import { Skeleton } from "../../components/ui/skeleton"
@@ -19,8 +18,7 @@ export function PropertiesPage() {
   const [editProperty, setEditProperty] = useState<Property | null>(null)
 
   return (
-    <DashboardLayout title="Properties">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <PageHeader
           title="Properties"
           subtitle="Manage all properties and track occupancy"
@@ -81,6 +79,6 @@ export function PropertiesPage() {
           property={editProperty ?? undefined}
         />
       </div>
-    </DashboardLayout>
   )
 }
+

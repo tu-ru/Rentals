@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { DashboardLayout } from "../../components/layouts"
 import { PageHeader } from "../../components/shared"
 import { Button } from "../../components/ui/button"
 import {
@@ -20,8 +19,7 @@ export function InvoicesPage() {
   const [selected, setSelected] = useState<InvoiceListItem | null>(null)
 
   return (
-    <DashboardLayout title="Invoices">
-      <div className="space-y-5">
+    <div className="space-y-5">
         <PageHeader
           title="Invoices"
           subtitle="Generate and manage invoices"
@@ -44,6 +42,6 @@ export function InvoicesPage() {
         <InvoiceForm open={openCreate} onOpenChange={setOpenCreate} />
         <InvoiceDetailModal invoiceId={selected?.id} open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)} />
       </div>
-    </DashboardLayout>
   )
 }
+

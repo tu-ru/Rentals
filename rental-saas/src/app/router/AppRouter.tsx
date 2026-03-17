@@ -1,6 +1,6 @@
 import type { ReactElement } from "react"
 import { Navigate, Outlet, Route, Routes } from "react-router-dom"
-import { AuthLayout } from "../../components/layouts"
+import { AuthLayout, DashboardShell } from "../../components/layouts"
 import { useAuth } from "../providers"
 import { PrivateRoute } from "./PrivateRoute"
 import { RoleRoute } from "./RoleRoute"
@@ -19,6 +19,7 @@ import { InvoicesPage } from "../../pages/dashboard/InvoicesPage"
 import { MaintenancePage } from "../../pages/dashboard/MaintenancePage"
 import { MessagesPage } from "../../pages/dashboard/MessagesPage"
 import { ReportsPage } from "../../pages/dashboard/ReportsPage"
+import { SmsPage } from "../../pages/dashboard/SmsPage"
 import { SettingsPage } from "../../pages/dashboard/SettingsPage"
 import { AgentHomePage } from "../../pages/dashboard/AgentHomePage"
 import { TenantDashboardPage } from "../../pages/tenant/TenantDashboardPage"
@@ -77,9 +78,7 @@ export function AppRouter() {
       <Route
         path="/dashboard"
         element={
-          <RoleRoute allowedRoles={["admin", "landlord"]}>
-            <Outlet />
-          </RoleRoute>
+          <RoleRoute allowedRoles={["admin", "landlord"]}><DashboardShell /></RoleRoute>
         }
       >
         <Route index element={<DashboardHomePage />} />
@@ -90,6 +89,7 @@ export function AppRouter() {
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
+        <Route path="sms" element={<SmsPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
@@ -132,3 +132,4 @@ export function AppRouter() {
     </Routes>
   )
 }
+

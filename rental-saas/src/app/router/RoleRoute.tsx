@@ -1,4 +1,4 @@
-import type { ReactElement } from "react"
+﻿import type { ReactElement } from "react"
 import { Navigate } from "react-router-dom"
 import type { UserRole } from "../../types/auth.types"
 import { useAuth } from "../providers"
@@ -12,11 +12,13 @@ function fallback(role?: UserRole) {
 }
 
 export function RoleRoute({ children, allowedRoles }: { children: ReactElement; allowedRoles: UserRole[] }) {
-  const { loading, profile } = useAuth()
+  const { initialized, profile, user } = useAuth()
+  const normalizedRole = profile?.role ? (profile.role.trim().toLowerCase() as UserRole) : undefined
+  const isAllowed = normalizedRole ? allowedRoles.includes(normalizedRole) : false
 
   return (
     <PrivateRoute>
-      {loading ? <PageLoader /> : profile && allowedRoles.includes(profile.role) ? children : <Navigate to={fallback(profile?.role)} replace />}
+      {!initialized ? <PageLoader /> : user && !profile ? <PageLoader /> : isAllowed ? children : <Navigate to={fallback(normalizedRole)} replace />}
     </PrivateRoute>
   )
 }

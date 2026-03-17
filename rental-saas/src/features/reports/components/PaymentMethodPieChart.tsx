@@ -1,4 +1,4 @@
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+﻿import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { formatKES } from "../../../lib/utils/format"
 
 const COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#64748b"]
@@ -19,7 +19,7 @@ export function PaymentMethodPieChart({ data }: { data: Array<{ method: string; 
             formatter={(value, entry: any) => {
               const amount = entry.payload.amount ?? 0
               const pct = total > 0 ? ((amount / total) * 100).toFixed(1) : "0.0"
-              return `${value} • ${formatKES(amount)} (${pct}%)`
+              return `${value} - ${formatKES(amount)} (${pct}%)`
             }}
           />
         </PieChart>
@@ -27,3 +27,4 @@ export function PaymentMethodPieChart({ data }: { data: Array<{ method: string; 
     </div>
   )
 }
+

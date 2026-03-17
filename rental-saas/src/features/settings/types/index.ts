@@ -1,11 +1,35 @@
-import type { UserRole } from "../../../types/auth.types"
+﻿import type { UserRole } from "../../../types/auth.types"
 
 export type SubscriptionPlan = "free" | "starter" | "pro" | "enterprise"
+
+export type NotificationPreferenceKey = "rent_reminder" | "payment_confirmed" | "maintenance_update" | "lease_expiry" | "general"
+
+export interface NotificationPreferences {
+  rent_reminder: boolean
+  payment_confirmed: boolean
+  maintenance_update: boolean
+  lease_expiry: boolean
+  general: boolean
+}
+
+export interface SmsAutomationPreferences {
+  welcome: boolean
+  rent_reminder: boolean
+  overdue_notice: boolean
+  payment_confirmed: boolean
+  maintenance_update: boolean
+  lease_expiry: boolean
+}
 
 export interface OrganizationPreferences {
   currency: string
   timezone: string
   date_format: string
+  notification_preferences?: NotificationPreferences
+  sms_api_key?: string
+  sms_partner_id?: string
+  sms_shortcode?: string
+  sms_automation?: SmsAutomationPreferences
 }
 
 export interface OrganizationSettingsInput {

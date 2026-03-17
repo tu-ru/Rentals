@@ -80,7 +80,7 @@ export function useMpesaQueryTransactions() {
       })
 
       if ((result.invoicesUpdated ?? result.matched ?? 0) > 0 && profile?.organization_id) {
-        toast({ title: "Payment confirmation SMS sent automatically (mock)" })
+        toast({ title: "Payment confirmation SMS queued for matched invoices" })
       }
     },
     onError: (error) => toast({ title: "Transaction sync failed", description: String(error), variant: "destructive" }),

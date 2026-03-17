@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { DashboardLayout } from "../../components/layouts"
 import { PageHeader } from "../../components/shared"
 import { Button } from "../../components/ui/button"
 import { LeaseForm, LeaseTable } from "../../features/tenants/components"
@@ -12,8 +11,7 @@ export function LeasesPage() {
   const [openLeaseForm, setOpenLeaseForm] = useState(false)
 
   return (
-    <DashboardLayout title="Leases">
-      <div className="space-y-5">
+    <div className="space-y-5">
         <PageHeader
           title="Leases"
           subtitle="Track active, expired, and terminated leases"
@@ -37,6 +35,6 @@ export function LeasesPage() {
 
         <LeaseForm open={openLeaseForm} onOpenChange={setOpenLeaseForm} />
       </div>
-    </DashboardLayout>
   )
 }
+

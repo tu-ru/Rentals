@@ -132,8 +132,11 @@ export async function updateStatus(
   const organizationId = await getMyOrgId()
   const payload: Record<string, unknown> = { status }
   if (status === "resolved") {
+    if (!resolutionNotes || !resolutionNotes.trim()) {
+      throw new Error("Resolution notes are required when resolving a request.")
+    }
     payload.resolved_at = new Date().toISOString()
-    payload.resolution_notes = resolutionNotes ?? null
+    payload.resolution_notes = resolutionNotes
   }
 
   const { data, error } = await supabase
@@ -183,3 +186,4 @@ export async function getAssignableStaff(organizationId: string) {
   if (error) throw error
   return data ?? []
 }
+

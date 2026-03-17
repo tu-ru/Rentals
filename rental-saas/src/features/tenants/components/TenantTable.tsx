@@ -1,12 +1,13 @@
 import { type ColumnDef } from "@tanstack/react-table"
 import { useState } from "react"
+import { MessageSquare } from "lucide-react"
 import { DataTable } from "../../../components/shared/DataTable"
 import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { formatKES } from "../../../lib/utils/format"
 import type { TenantRow } from "../types"
-import { SendSmsDialog } from "./SendSmsDialog"
+import { SendSmsDialog } from "../../sms/components"
 
 export function TenantTable({
   tenants,
@@ -74,7 +75,9 @@ export function TenantTable({
       cell: ({ row }) => (
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => onView(row.original)}>View Profile</Button>
-          <Button size="sm" variant="outline" onClick={() => setSmsTenant(row.original)}>Send SMS</Button>
+          <Button size="sm" variant="outline" onClick={() => setSmsTenant(row.original)} aria-label="Send SMS">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
           <Button size="sm" variant="outline" onClick={() => onEdit(row.original)}>Edit</Button>
           <Button size="sm" variant="outline" onClick={() => onToggleActive(row.original)}>
             {row.original.is_active ? "Deactivate" : "Reactivate"}
@@ -87,11 +90,20 @@ export function TenantTable({
   return (
     <>
       <DataTable columns={columns} data={tenants} loading={loading} searchKey="full_name" searchPlaceholder="Search by name or phone" />
-      <SendSmsDialog
-        open={Boolean(smsTenant)}
-        onOpenChange={(open) => !open && setSmsTenant(null)}
-        tenant={smsTenant ? { full_name: smsTenant.full_name, phone: smsTenant.phone } : undefined}
-      />
+      {smsTenant && (
+        <SendSmsDialog
+          open={Boolean(smsTenant)}
+          onOpenChange={(open) => !open && setSmsTenant(null)}
+          tenantId={smsTenant.id}
+          tenantName={smsTenant.full_name ?? "Tenant"}
+          tenantPhone={smsTenant.phone}
+          defaultMessageType="paybill_info"
+          defaultVariables={{
+            unit_number: smsTenant.activeLease?.unit_number ?? "",
+            property_name: smsTenant.activeLease?.property_name ?? "",
+          }}
+        />
+      )}
     </>
   )
 }

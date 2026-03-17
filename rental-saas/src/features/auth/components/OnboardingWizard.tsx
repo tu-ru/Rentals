@@ -37,6 +37,9 @@ export function OnboardingWizard() {
   const [mpesaShortcode, setMpesaShortcode] = useState(organization?.mpesa_shortcode ?? "")
   const [mpesaNominatedNumber, setMpesaNominatedNumber] = useState(organization?.mpesa_nominated_number ?? "")
   const [mpesaEnv, setMpesaEnv] = useState<"sandbox" | "production">(organization?.mpesa_env ?? "sandbox")
+  const [smsAutoWelcome, setSmsAutoWelcome] = useState(
+    ((organization?.settings as any)?.sms_automation?.welcome ?? true) as boolean,
+  )
 
   const [propertyName, setPropertyName] = useState("")
   const [propertyType, setPropertyType] = useState<PropertyType>("apartment")
@@ -112,6 +115,13 @@ export function OnboardingWizard() {
           mpesa_shortcode: mpesaShortcode.trim() || null,
           mpesa_nominated_number: mpesaNominatedNumber.trim() || null,
           mpesa_env: mpesaEnv,
+          settings: {
+            ...((organization?.settings as Record<string, any>) ?? {}),
+            sms_automation: {
+              ...(((organization?.settings as Record<string, any>) ?? {})?.sms_automation ?? {}),
+              welcome: smsAutoWelcome,
+            },
+          },
         })
         .eq("id", organizationId)
       if (orgUpdateError) throw orgUpdateError
@@ -208,6 +218,14 @@ export function OnboardingWizard() {
                   </label>
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={smsAutoWelcome}
+                  onChange={(event) => setSmsAutoWelcome(event.target.checked)}
+                />
+                When new tenants are added, automatically send them their Paybill details via SMS
+              </label>
             </>
           )}
 

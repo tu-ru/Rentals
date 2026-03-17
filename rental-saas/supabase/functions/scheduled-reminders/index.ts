@@ -8,14 +8,42 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 )
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
+const SERVICE_SECRET = Deno.env.get("SERVICE_SECRET") ?? ""
+const smsSettingsCache = new Map<string, Record<string, any>>()
+
 function dateOnly(date: Date) {
   return date.toISOString().slice(0, 10)
+}
+
+async function getSmsAutomation(orgId: string) {
+  if (smsSettingsCache.has(orgId)) return smsSettingsCache.get(orgId) ?? {}
+  const { data } = await supabase.from("organizations").select("settings").eq("id", orgId).single()
+  const settings = (data?.settings ?? {}) as Record<string, any>
+  const automation = (settings.sms_automation ?? {}) as Record<string, any>
+  smsSettingsCache.set(orgId, automation)
+  return automation
+}
+
+async function sendAutomatedSms(payload: Record<string, unknown>, automationKey: string) {
+  const orgId = payload.organization_id as string
+  if (!orgId || !SUPABASE_URL || !SERVICE_SECRET) return
+  const automation = await getSmsAutomation(orgId)
+  if (automation?.[automationKey] === false) return
+  await fetch(`${SUPABASE_URL}/functions/v1/send-sms`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Service-Secret": SERVICE_SECRET,
+    },
+    body: JSON.stringify({ ...payload, is_automated: true }),
+  })
 }
 
 async function runOverdueInvoices(today: string) {
   const { data, error } = await supabase
     .from("invoices")
-    .select("id, organization_id, tenant_id")
+    .select("id, organization_id, tenant_id, balance, invoice_number, due_date")
     .lt("due_date", today)
     .neq("status", "paid")
   if (error) throw error
@@ -34,13 +62,31 @@ async function runOverdueInvoices(today: string) {
 
   const { error: insertError } = await supabase.from("notifications").insert(payload)
   if (insertError) throw insertError
+
+  for (const invoice of data) {
+    await sendAutomatedSms(
+      {
+        organization_id: invoice.organization_id,
+        tenant_id: invoice.tenant_id,
+        message_type: "overdue_notice",
+        related_invoice_id: invoice.id,
+        template_variables: {
+          amount: `KES ${invoice.balance}`,
+          invoice_number: invoice.invoice_number,
+          due_date: invoice.due_date,
+        },
+      },
+      "overdue_notice",
+    )
+  }
+
   return { scanned: data.length, created: payload.length }
 }
 
 async function runUpcomingRentReminders(targetDate: string) {
   const { data, error } = await supabase
     .from("invoices")
-    .select("id, organization_id, tenant_id")
+    .select("id, organization_id, tenant_id, amount_due, due_date, invoice_number")
     .eq("due_date", targetDate)
     .eq("status", "sent")
   if (error) throw error
@@ -58,13 +104,31 @@ async function runUpcomingRentReminders(targetDate: string) {
 
   const { error: insertError } = await supabase.from("notifications").insert(payload)
   if (insertError) throw insertError
+
+  for (const invoice of data) {
+    await sendAutomatedSms(
+      {
+        organization_id: invoice.organization_id,
+        tenant_id: invoice.tenant_id,
+        message_type: "rent_reminder",
+        related_invoice_id: invoice.id,
+        template_variables: {
+          amount: `KES ${invoice.amount_due}`,
+          due_date: invoice.due_date,
+          invoice_number: invoice.invoice_number,
+        },
+      },
+      "rent_reminder",
+    )
+  }
+
   return { scanned: data.length, created: payload.length }
 }
 
 async function runLeaseExpiryWarnings(targetDate: string) {
   const { data, error } = await supabase
     .from("leases")
-    .select("id, organization_id, tenant_id")
+    .select("id, organization_id, tenant_id, end_date")
     .eq("end_date", targetDate)
     .eq("status", "active")
   if (error) throw error
@@ -82,6 +146,22 @@ async function runLeaseExpiryWarnings(targetDate: string) {
 
   const { error: insertError } = await supabase.from("notifications").insert(payload)
   if (insertError) throw insertError
+
+  for (const lease of data) {
+    await sendAutomatedSms(
+      {
+        organization_id: lease.organization_id,
+        tenant_id: lease.tenant_id,
+        message_type: "lease_expiry",
+        related_lease_id: lease.id,
+        template_variables: {
+          lease_end_date: lease.end_date,
+        },
+      },
+      "lease_expiry",
+    )
+  }
+
   return { scanned: data.length, created: payload.length }
 }
 

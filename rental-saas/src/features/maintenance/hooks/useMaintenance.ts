@@ -1,7 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "../../../app/providers"
 import { QUERY_KEYS } from "../../../lib/constants"
 import { useToast } from "../../../components/ui/toast"
+import { createNotification } from "../../notifications/services"
+import * as smsService from "../../sms/services"
 import * as maintenanceService from "../services"
 import type { CreateMaintenanceInput, MaintenanceRequest, UpdateMaintenanceInput } from "../types"
 
@@ -57,10 +59,53 @@ export function useUpdateMaintenanceRequest() {
 
 export function useAssignMaintenanceRequest() {
   const queryClient = useQueryClient()
+  const { organization } = useAuth()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, assignedToId }: { id: string; assignedToId: string }) => maintenanceService.assignRequest(id, assignedToId),
+    mutationFn: async ({
+      id,
+      assignedToId,
+      tenantId,
+      organizationId,
+      title,
+    }: {
+      id: string
+      assignedToId: string
+      tenantId?: string
+      organizationId?: string
+      title?: string
+    }) => {
+      const updated = await maintenanceService.assignRequest(id, assignedToId)
+      const prefs = (organization?.settings as any)?.notification_preferences ?? {}
+      const smsPrefs = (organization?.settings as any)?.sms_automation ?? {}
+      if (tenantId && organizationId && prefs.maintenance_update !== false) {
+        await createNotification({
+          organization_id: organizationId,
+          recipient_id: tenantId,
+          type: "maintenance_update",
+          title: "Maintenance assigned",
+          body: `${title ?? "Your request"} has been assigned to a staff member.`,
+          metadata: { request_id: id, status: updated.status, source: "maintenance_status_sms", target: "/tenant/maintenance" },
+        })
+      }
+      if (tenantId && organizationId && smsPrefs.maintenance_update !== false) {
+        try {
+          await smsService.sendSms(organizationId, {
+            tenant_id: tenantId,
+            message_type: "maintenance_update",
+            related_maintenance_id: id,
+            template_variables: {
+              title: title ?? "Maintenance request",
+              status: "assigned",
+            },
+          })
+        } catch {
+          // Do not block assignment flow if SMS fails
+        }
+      }
+      return updated
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] }),
     onError: (error) => toast({ title: "Failed to assign request", description: String(error), variant: "destructive" }),
   })
@@ -68,11 +113,56 @@ export function useAssignMaintenanceRequest() {
 
 export function useUpdateMaintenanceStatus() {
   const queryClient = useQueryClient()
+  const { organization } = useAuth()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, status, resolutionNotes }: { id: string; status: MaintenanceRequest["status"]; resolutionNotes?: string }) =>
-      maintenanceService.updateStatus(id, status, resolutionNotes),
+    mutationFn: async ({
+      id,
+      status,
+      resolutionNotes,
+      tenantId,
+      organizationId,
+      title,
+    }: {
+      id: string
+      status: MaintenanceRequest["status"]
+      resolutionNotes?: string
+      tenantId?: string
+      organizationId?: string
+      title?: string
+    }) => {
+      const updated = await maintenanceService.updateStatus(id, status, resolutionNotes)
+      const prefs = (organization?.settings as any)?.notification_preferences ?? {}
+      const smsPrefs = (organization?.settings as any)?.sms_automation ?? {}
+      if (tenantId && organizationId && prefs.maintenance_update !== false) {
+        await createNotification({
+          organization_id: organizationId,
+          recipient_id: tenantId,
+          type: "maintenance_update",
+          title: "Maintenance update",
+          body: `${title ?? "Your request"} is now ${status.replace("_", " ")}.`,
+          metadata: { request_id: id, status, source: "maintenance_status_sms", target: "/tenant/maintenance" },
+        })
+      }
+      if (tenantId && organizationId && smsPrefs.maintenance_update !== false) {
+        try {
+          await smsService.sendSms(organizationId, {
+            tenant_id: tenantId,
+            message_type: "maintenance_update",
+            related_maintenance_id: id,
+            template_variables: {
+              title: title ?? "Maintenance request",
+              status: status.replace("_", " "),
+              resolution_notes: resolutionNotes ?? "",
+            },
+          })
+        } catch {
+          // Do not block status update flow if SMS fails
+        }
+      }
+      return updated
+    },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] }),
     onError: (error) => toast({ title: "Failed to update status", description: String(error), variant: "destructive" }),
   })

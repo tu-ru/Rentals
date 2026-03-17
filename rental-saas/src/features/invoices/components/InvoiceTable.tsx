@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useState } from "react"
+import { SendSmsDialog } from "../../sms/components"
 import { DataTable } from "../../../components/shared/DataTable"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
@@ -21,6 +22,7 @@ export function InvoiceTable({
   onUpdateStatus: (id: string, status: InvoiceListItem["status"]) => void
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | InvoiceListItem["status"]>("all")
+  const [smsInvoice, setSmsInvoice] = useState<InvoiceListItem | null>(null)
 
   const rows = useMemo(() => {
     if (statusFilter === "all") return invoices
@@ -33,7 +35,7 @@ export function InvoiceTable({
     {
       id: "unit",
       header: "Unit",
-      cell: ({ row }) => `${row.original.property_name ?? "-"} • ${row.original.unit_number ?? "-"}`,
+      cell: ({ row }) => `${row.original.property_name ?? "-"} - ${row.original.unit_number ?? "-"}`,
     },
     {
       id: "period",
@@ -59,6 +61,9 @@ export function InvoiceTable({
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={() => onView(row.original)}>View</Button>
           <Button size="sm" variant="outline" onClick={() => onMarkSent(row.original.id)} disabled={row.original.status !== "draft"}>Mark Sent</Button>
+          {new Date(row.original.due_date) < new Date() && !["paid", "cancelled"].includes(row.original.status) && (
+            <Button size="sm" variant="outline" onClick={() => setSmsInvoice(row.original)}>Send Reminder</Button>
+          )}
           <select
             className="h-8 rounded border px-2 text-xs"
             value={row.original.status}
@@ -98,6 +103,24 @@ export function InvoiceTable({
             : undefined
         }
       />
+      {smsInvoice && (
+        <SendSmsDialog
+          open={Boolean(smsInvoice)}
+          onOpenChange={(open) => !open && setSmsInvoice(null)}
+          tenantId={smsInvoice.tenant_id}
+          tenantName={smsInvoice.tenant_name ?? "Tenant"}
+          tenantPhone={undefined}
+          defaultMessageType="overdue_notice"
+          defaultVariables={{
+            amount: formatKES(Number(smsInvoice.balance ?? 0)),
+            invoice_number: smsInvoice.invoice_number ?? "",
+            due_date: smsInvoice.due_date,
+            unit_number: smsInvoice.unit_number ?? "",
+            property_name: smsInvoice.property_name ?? "",
+          }}
+          relatedInvoiceId={smsInvoice.id}
+        />
+      )}
     </div>
   )
 }

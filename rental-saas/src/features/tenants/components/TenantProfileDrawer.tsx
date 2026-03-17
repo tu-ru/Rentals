@@ -1,14 +1,17 @@
+import { useState } from "react"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs"
 import { formatDate, formatKES } from "../../../lib/utils/format"
 import { useRenewLease, useTerminateLease, useTenant } from "../hooks"
 import { LeaseCard } from "./LeaseCard"
+import { SendSmsDialog } from "../../sms/components"
 
 export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; onClose: () => void }) {
   const { data: tenant } = useTenant(tenantId)
   const terminateLease = useTerminateLease()
   const renewLease = useRenewLease()
+  const [smsOpen, setSmsOpen] = useState(false)
 
   if (!tenantId) return null
 
@@ -17,7 +20,12 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
       <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-background p-5" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Tenant Profile</h3>
-          <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
+          <div className="flex items-center gap-2">
+            {tenant && (
+              <Button size="sm" variant="outline" onClick={() => setSmsOpen(true)}>Send SMS</Button>
+            )}
+            <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
+          </div>
         </div>
 
         {tenant ? (
@@ -71,7 +79,7 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
                 {tenant.payments.slice(0, 10).map((payment) => (
                   <div key={payment.id} className="rounded border p-2 text-sm">
                     <p className="font-medium">{formatKES(Number(payment.amount))}</p>
-                    <p className="text-muted-foreground">{formatDate(payment.created_at)} • {payment.payment_method}</p>
+                    <p className="text-muted-foreground">{formatDate(payment.created_at)} - {payment.payment_method}</p>
                   </div>
                 ))}
                 {tenant.payments.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}
@@ -81,12 +89,25 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
                 {tenant.maintenanceRequests.filter((item) => item.status !== "closed").map((item) => (
                   <div key={item.id} className="rounded border p-2 text-sm">
                     <p className="font-medium">{item.title}</p>
-                    <p className="text-muted-foreground">{item.status} • {item.priority}</p>
+                    <p className="text-muted-foreground">{item.status} - {item.priority}</p>
                   </div>
                 ))}
                 {tenant.maintenanceRequests.length === 0 && <p className="text-sm text-muted-foreground">No maintenance requests.</p>}
               </TabsContent>
             </Tabs>
+
+            <SendSmsDialog
+              open={smsOpen}
+              onOpenChange={setSmsOpen}
+              tenantId={tenant.id}
+              tenantName={tenant.full_name ?? "Tenant"}
+              tenantPhone={tenant.phone}
+              defaultMessageType="paybill_info"
+              defaultVariables={{
+                unit_number: tenant.activeLease?.unit_number ?? "",
+                property_name: tenant.activeLease?.property_name ?? "",
+              }}
+            />
           </>
         ) : (
           <p className="text-sm text-muted-foreground">Loading...</p>

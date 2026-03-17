@@ -1,8 +1,9 @@
-import { useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
 import { Label } from "../../../components/ui/label"
 import { Select } from "../../../components/ui/select"
+import { useAuth } from "../../../app/providers"
 import { useAssignMaintenanceRequest, useAssignableStaff, useUpdateMaintenanceStatus } from "../hooks"
 import type { MaintenanceRequest } from "../types"
 
@@ -10,11 +11,14 @@ export function MaintenanceStatusForm({
   open,
   onOpenChange,
   request,
+  initialStatus,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   request: MaintenanceRequest | null
+  initialStatus?: MaintenanceRequest["status"]
 }) {
+  const { profile } = useAuth()
   const [status, setStatus] = useState<MaintenanceRequest["status"]>(request?.status ?? "open")
   const [assignedTo, setAssignedTo] = useState(request?.assigned_to ?? "")
   const [resolutionNotes, setResolutionNotes] = useState("")
@@ -22,11 +26,34 @@ export function MaintenanceStatusForm({
   const statusMutation = useUpdateMaintenanceStatus()
   const { data: staff = [] } = useAssignableStaff()
 
+  useEffect(() => {
+    if (!request) return
+    setStatus(initialStatus ?? request.status)
+    setAssignedTo(request.assigned_to ?? "")
+    setResolutionNotes("")
+  }, [request, initialStatus])
+
   if (!request) return null
 
   const submit = async () => {
-    if (assignedTo) await assignMutation.mutateAsync({ id: request.id, assignedToId: assignedTo })
-    await statusMutation.mutateAsync({ id: request.id, status, resolutionNotes })
+    if (assignedTo) {
+      await assignMutation.mutateAsync({
+        id: request.id,
+        assignedToId: assignedTo,
+        tenantId: request.tenant_id,
+        organizationId: profile?.organization_id,
+        title: request.title,
+      })
+    }
+
+    await statusMutation.mutateAsync({
+      id: request.id,
+      status,
+      resolutionNotes,
+      tenantId: request.tenant_id,
+      organizationId: profile?.organization_id,
+      title: request.title,
+    })
     onOpenChange(false)
   }
 

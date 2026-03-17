@@ -1,7 +1,6 @@
 import { ArrowLeft, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { DashboardLayout } from "../../components/layouts"
 import { PageHeader } from "../../components/shared"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -27,99 +26,96 @@ export function PropertyDetailPage() {
 
   if (!property) {
     return (
-      <DashboardLayout title="Property">
-        <p className="text-sm text-muted-foreground">Loading property...</p>
-      </DashboardLayout>
+      <p className="text-sm text-muted-foreground">Loading property...</p>
     )
   }
 
   return (
-    <DashboardLayout title={property.name}>
-      <div className="space-y-6">
-        <Button variant="outline" onClick={() => navigate("/dashboard/properties")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+    <div className="space-y-6">
+      <Button variant="outline" onClick={() => navigate("/dashboard/properties")}>
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+      </Button>
 
-        <PageHeader
-          title={property.name}
-          subtitle={`${property.address}, ${property.city}`}
-          actions={
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setOpenPropertyForm(true)}>
-                Edit Property
-              </Button>
-              <Button onClick={() => setOpenUnitForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />Add Unit
-              </Button>
-            </div>
-          }
-        />
+      <PageHeader
+        title={property.name}
+        subtitle={`${property.address}, ${property.city}`}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpenPropertyForm(true)}>
+              Edit Property
+            </Button>
+            <Button onClick={() => setOpenUnitForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />Add Unit
+            </Button>
+          </div>
+        }
+      />
 
-        <Tabs defaultValue="units">
-          <TabsList>
-            <TabsTrigger value="units">Units</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="units">
+        <TabsList>
+          <TabsTrigger value="units">Units</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="units" className="mt-4">
-            <UnitsGrid
-              units={units}
-              onAddFirst={() => setOpenUnitForm(true)}
-              onEdit={(unit) => {
-                setEditUnit(unit)
-                setOpenUnitForm(true)
-              }}
-              onChangeStatus={(unit, status) => {
-                void updateStatus.mutateAsync({ id: unit.id, status, propertyId: property.id })
-              }}
-            />
-          </TabsContent>
+        <TabsContent value="units" className="mt-4">
+          <UnitsGrid
+            units={units}
+            onAddFirst={() => setOpenUnitForm(true)}
+            onEdit={(unit) => {
+              setEditUnit(unit)
+              setOpenUnitForm(true)
+            }}
+            onChangeStatus={(unit, status) => {
+              void updateStatus.mutateAsync({ id: unit.id, status, propertyId: property.id })
+            }}
+          />
+        </TabsContent>
 
-          <TabsContent value="details" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Property information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+        <TabsContent value="details" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Property information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p>
+                <strong>Type:</strong> <Badge>{property.property_type.replace("_", " ")}</Badge>
+              </p>
+              <p>
+                <strong>Address:</strong> {property.address}
+              </p>
+              <p>
+                <strong>City:</strong> {property.city}
+              </p>
+              <p>
+                <strong>County:</strong> {property.county}
+              </p>
+              <p>
+                <strong>Total Units:</strong> {Math.max(property.total_units, units.length)}
+              </p>
+              <p>
+                <strong>Occupied:</strong> {occupied}
+              </p>
+              {property.description && (
                 <p>
-                  <strong>Type:</strong> <Badge>{property.property_type.replace("_", " ")}</Badge>
+                  <strong>Description:</strong> {property.description}
                 </p>
-                <p>
-                  <strong>Address:</strong> {property.address}
-                </p>
-                <p>
-                  <strong>City:</strong> {property.city}
-                </p>
-                <p>
-                  <strong>County:</strong> {property.county}
-                </p>
-                <p>
-                  <strong>Total Units:</strong> {Math.max(property.total_units, units.length)}
-                </p>
-                <p>
-                  <strong>Occupied:</strong> {occupied}
-                </p>
-                {property.description && (
-                  <p>
-                    <strong>Description:</strong> {property.description}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-        <UnitForm
-          open={openUnitForm}
-          onOpenChange={(open) => {
-            setOpenUnitForm(open)
-            if (!open) setEditUnit(null)
-          }}
-          propertyId={property.id}
-          unit={editUnit ?? undefined}
-        />
-        <PropertyForm open={openPropertyForm} onOpenChange={setOpenPropertyForm} property={property} />
-      </div>
-    </DashboardLayout>
+      <UnitForm
+        open={openUnitForm}
+        onOpenChange={(open) => {
+          setOpenUnitForm(open)
+          if (!open) setEditUnit(null)
+        }}
+        propertyId={property.id}
+        unit={editUnit ?? undefined}
+      />
+      <PropertyForm open={openPropertyForm} onOpenChange={setOpenPropertyForm} property={property} />
+    </div>
   )
 }
+

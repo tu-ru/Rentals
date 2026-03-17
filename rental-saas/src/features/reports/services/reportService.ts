@@ -1,27 +1,47 @@
-import { format } from "date-fns"
+﻿import { format } from "date-fns"
 import { supabase } from "../../../lib/supabase/client"
 
 function monthKey(date: Date) {
   return format(date, "MMM yyyy")
 }
 
-function getMonthBuckets(months: number) {
-  const now = new Date()
+function getMonthBuckets(months: number, endDate?: Date) {
+  const now = endDate ?? new Date()
   return Array.from({ length: months }).map((_, idx) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - idx), 1)
     return { key: monthKey(d), date: d }
   })
 }
 
-export async function getRentCollectionByMonth(organizationId: string, months = 12) {
-  const buckets = getMonthBuckets(months)
-  const start = buckets[0].date.toISOString()
+function normalizeRange(dateFrom?: string, dateTo?: string) {
+  if (!dateFrom || !dateTo) return null
+  const start = new Date(dateFrom)
+  const end = new Date(dateTo)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null
+  if (start > end) return null
+  return { start, end }
+}
 
-  const { data: invoices } = await supabase
+function monthsBetween(start: Date, end: Date) {
+  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
+}
+
+export async function getRentCollectionByMonth(organizationId: string, months = 12, dateFrom?: string, dateTo?: string) {
+  const range = normalizeRange(dateFrom, dateTo)
+  const buckets = range
+    ? getMonthBuckets(monthsBetween(range.start, range.end), range.end)
+    : getMonthBuckets(months)
+  const start = buckets[0].date.toISOString()
+  const end = range ? range.end.toISOString() : undefined
+
+  let invoiceQuery = supabase
     .from("invoices")
     .select("created_at, amount_due, amount_paid")
     .eq("organization_id", organizationId)
     .gte("created_at", start)
+
+  if (end) invoiceQuery = invoiceQuery.lte("created_at", end)
+  const { data: invoices } = await invoiceQuery
 
   return buckets.map((bucket) => {
     const monthInvoices = (invoices ?? []).filter((i) => monthKey(new Date(i.created_at)) === bucket.key)
@@ -31,8 +51,12 @@ export async function getRentCollectionByMonth(organizationId: string, months = 
   })
 }
 
-export async function getOccupancyOverTime(organizationId: string, months = 6) {
-  const buckets = getMonthBuckets(months)
+export async function getOccupancyOverTime(organizationId: string, months = 6, dateFrom?: string, dateTo?: string) {
+  const range = normalizeRange(dateFrom, dateTo)
+  const buckets = range
+    ? getMonthBuckets(monthsBetween(range.start, range.end), range.end)
+    : getMonthBuckets(months)
+
   const { data: units } = await supabase.from("units").select("status, created_at").eq("organization_id", organizationId)
 
   return buckets.map((bucket) => {
@@ -44,14 +68,32 @@ export async function getOccupancyOverTime(organizationId: string, months = 6) {
   })
 }
 
-export async function getRevenueVsExpenses(organizationId: string, months = 6) {
-  const buckets = getMonthBuckets(months)
+export async function getRevenueVsExpenses(organizationId: string, months = 6, dateFrom?: string, dateTo?: string) {
+  const range = normalizeRange(dateFrom, dateTo)
+  const buckets = range
+    ? getMonthBuckets(monthsBetween(range.start, range.end), range.end)
+    : getMonthBuckets(months)
   const start = buckets[0].date.toISOString()
+  const end = range ? range.end.toISOString() : undefined
 
-  const [{ data: payments }, { data: expenses }] = await Promise.all([
-    supabase.from("payments").select("created_at, amount, status").eq("organization_id", organizationId).gte("created_at", start),
-    supabase.from("expenses").select("created_at, amount").eq("organization_id", organizationId).gte("created_at", start),
-  ])
+  let paymentsQuery = supabase
+    .from("payments")
+    .select("created_at, amount, status")
+    .eq("organization_id", organizationId)
+    .gte("created_at", start)
+
+  let expenseQuery = supabase
+    .from("expenses")
+    .select("created_at, amount")
+    .eq("organization_id", organizationId)
+    .gte("created_at", start)
+
+  if (end) {
+    paymentsQuery = paymentsQuery.lte("created_at", end)
+    expenseQuery = expenseQuery.lte("created_at", end)
+  }
+
+  const [{ data: payments }, { data: expenses }] = await Promise.all([paymentsQuery, expenseQuery])
 
   return buckets.map((bucket) => {
     const revenue = (payments ?? [])
@@ -64,48 +106,98 @@ export async function getRevenueVsExpenses(organizationId: string, months = 6) {
   })
 }
 
-export async function getPropertyBreakdown(organizationId: string) {
-  const [{ data: properties }, { data: units }, { data: payments }] = await Promise.all([
+export async function getPropertyBreakdown(organizationId: string, dateFrom?: string, dateTo?: string) {
+  const range = normalizeRange(dateFrom, dateTo)
+  let invoiceQuery = supabase
+    .from("invoices")
+    .select("unit_id, amount_paid, created_at")
+    .eq("organization_id", organizationId)
+
+  if (range) {
+    invoiceQuery = invoiceQuery.gte("created_at", range.start.toISOString()).lte("created_at", range.end.toISOString())
+  }
+
+  const [{ data: properties }, { data: units }, { data: invoices }] = await Promise.all([
     supabase.from("properties").select("id, name").eq("organization_id", organizationId),
     supabase.from("units").select("id, property_id, status").eq("organization_id", organizationId),
-    supabase.from("leases").select("unit_id, id").eq("organization_id", organizationId),
+    invoiceQuery,
   ])
 
   return (properties ?? []).map((property) => {
     const propertyUnits = (units ?? []).filter((u) => u.property_id === property.id)
     const occupied = propertyUnits.filter((u) => u.status === "occupied").length
-    const revenue = (payments ?? []).filter((l) => propertyUnits.some((u) => u.id === l.unit_id)).length * 0
+    const revenue = (invoices ?? [])
+      .filter((inv) => propertyUnits.some((u) => u.id === inv.unit_id))
+      .reduce((sum, inv) => sum + Number(inv.amount_paid ?? 0), 0)
     return { propertyName: property.name, units: propertyUnits.length, occupied, revenue }
   })
 }
 
-export async function getPaymentMethodBreakdown(organizationId: string, month?: string) {
-  const { data } = await supabase
+export async function getPaymentMethodBreakdown(organizationId: string, dateFrom?: string, dateTo?: string) {
+  let query = supabase
     .from("payments")
     .select("created_at, amount, payment_method, status")
     .eq("organization_id", organizationId)
     .in("status", ["confirmed", "reconciled"])
 
-  const filtered = month ? (data ?? []).filter((p) => monthKey(new Date(p.created_at)) === month) : data ?? []
+  const range = normalizeRange(dateFrom, dateTo)
+  if (range) {
+    query = query.gte("created_at", range.start.toISOString()).lte("created_at", range.end.toISOString())
+  }
+
+  const { data } = await query
+
+  const normalizeMethod = (method?: string | null) => {
+    const key = (method ?? "").toLowerCase().trim()
+    if (["m-pesa", "mpesa", "m_pesa"].includes(key)) return "m_pesa"
+    if (["cash", "cash_payment"].includes(key)) return "cash"
+    if (["bank", "bank_transfer", "bank transfer"].includes(key)) return "bank_transfer"
+    if (["cheque", "check", "cheque_payment"].includes(key)) return "cheque"
+    return "other"
+  }
+
+  const labelFor = (method: string) => {
+    switch (method) {
+      case "m_pesa":
+        return "M-Pesa"
+      case "cash":
+        return "Cash"
+      case "bank_transfer":
+        return "Bank Transfer"
+      case "cheque":
+        return "Cheque"
+      default:
+        return "Other"
+    }
+  }
 
   const map = new Map<string, { method: string; amount: number; count: number }>()
-  for (const payment of filtered) {
-    const key = payment.payment_method
-    const prev = map.get(key) ?? { method: key, amount: 0, count: 0 }
+  const order = ["m_pesa", "cash", "bank_transfer", "cheque"]
+  for (const payment of data ?? []) {
+    const key = normalizeMethod(payment.payment_method)
+    const prev = map.get(key) ?? { method: labelFor(key), amount: 0, count: 0 }
     prev.amount += Number(payment.amount ?? 0)
     prev.count += 1
     map.set(key, prev)
   }
-  return Array.from(map.values())
+  const ordered = order.map((key) => map.get(key) ?? { method: labelFor(key), amount: 0, count: 0 })
+  const other = map.get("other")
+  return other ? [...ordered, other] : ordered
 }
 
-export async function getArrearsReport(organizationId: string) {
-  const { data } = await supabase
+export async function getArrearsReport(organizationId: string, dateFrom?: string, dateTo?: string) {
+  let query = supabase
     .from("invoices")
     .select("balance, due_date, tenant:profiles(full_name), unit:units(unit_number)")
     .eq("organization_id", organizationId)
     .gt("balance", 0)
-    .order("balance", { ascending: false })
+
+  const range = normalizeRange(dateFrom, dateTo)
+  if (range) {
+    query = query.gte("due_date", range.start.toISOString().slice(0, 10)).lte("due_date", range.end.toISOString().slice(0, 10))
+  }
+
+  const { data } = await query.order("balance", { ascending: false })
 
   const now = new Date()
   return (data ?? []).map((row: any) => ({
@@ -177,3 +269,27 @@ export async function getPendingMaintenance(organizationId: string) {
     .limit(3)
   return data ?? []
 }
+
+export async function getPaymentsExport(organizationId: string, dateFrom?: string, dateTo?: string) {
+  let query = supabase
+    .from("payments")
+    .select("created_at, amount, payment_method, status, tenant:profiles(full_name), invoice:invoices(invoice_number)")
+    .eq("organization_id", organizationId)
+
+  const range = normalizeRange(dateFrom, dateTo)
+  if (range) {
+    query = query.gte("created_at", range.start.toISOString()).lte("created_at", range.end.toISOString())
+  }
+
+  const { data } = await query.order("created_at", { ascending: false })
+
+  return (data ?? []).map((row: any) => ({
+    date: row.created_at,
+    tenant: row.tenant?.full_name ?? "",
+    invoice: row.invoice?.invoice_number ?? "",
+    amount: Number(row.amount ?? 0),
+    method: row.payment_method,
+    status: row.status,
+  }))
+}
+

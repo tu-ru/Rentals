@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react"
-import { DashboardLayout } from "../../components/layouts"
+﻿import { useMemo, useState } from "react"
 import { ChatWindow, ConversationList, NewConversationDialog } from "../../features/messaging/components"
 import { useConversations } from "../../features/messaging/hooks"
 
@@ -12,7 +11,7 @@ export function MessagesPage() {
   const unreadByConversation = useMemo(() => ({}), [])
 
   return (
-    <DashboardLayout title="Messages">
+    <>
       <div className="h-[calc(100vh-8rem)] overflow-hidden rounded-lg border bg-background">
         <div className="hidden h-full md:grid md:grid-cols-3">
           <ConversationList
@@ -41,7 +40,7 @@ export function MessagesPage() {
             />
           ) : (
             <div className="h-full">
-              <button className="border-b px-4 py-2 text-sm" onClick={() => setMobileMode("list")}>← Back</button>
+              <button className="border-b px-4 py-2 text-sm" onClick={() => setMobileMode("list")}>â† Back</button>
               <ChatWindow conversationId={selectedId} />
             </div>
           )}
@@ -49,6 +48,6 @@ export function MessagesPage() {
       </div>
 
       <NewConversationDialog open={openNew} onOpenChange={setOpenNew} onCreated={(id) => setSelectedId(id)} />
-    </DashboardLayout>
+    </>
   )
 }

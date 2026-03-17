@@ -95,7 +95,7 @@ export function RecordPaymentForm({ open, onOpenChange }: { open: boolean; onOpe
               checked={Boolean(form.watch("send_sms"))}
               onChange={(event) => form.setValue("send_sms", event.target.checked)}
             />
-            Send payment confirmation SMS to tenant (mock notification)
+            Send payment confirmation SMS to tenant
           </label>
 
           <DialogFooter>

@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "../../../app/providers"
 import { useToast } from "../../../components/ui/toast"
 import { QUERY_KEYS } from "../../../lib/constants"
+import { createNotification } from "../../notifications/services"
 import * as invoiceService from "../services/invoiceService"
 import type { CreateInvoiceInput, InvoiceFilters, InvoiceStatus } from "../types"
 
@@ -33,11 +34,24 @@ export function useOverdueInvoices() {
 
 export function useCreateInvoice() {
   const queryClient = useQueryClient()
+  const { profile, organization } = useAuth()
   const { toast } = useToast()
+
   return useMutation({
     mutationFn: (data: CreateInvoiceInput) => invoiceService.createInvoice(data),
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
+      const prefs = (organization?.settings as any)?.notification_preferences ?? {}
+      if (prefs.rent_reminder !== false && profile?.organization_id) {
+        await createNotification({
+          organization_id: profile.organization_id,
+          recipient_id: variables.tenant_id,
+          type: "rent_reminder",
+          title: "New invoice",
+          body: "A new invoice has been issued.",
+          metadata: { invoice_id: data?.id, target: "/tenant/invoices" },
+        })
+      }
       toast({ title: "Invoice created" })
     },
     onError: (error) => toast({ title: "Failed to create invoice", description: String(error), variant: "destructive" }),

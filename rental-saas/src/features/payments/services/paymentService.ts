@@ -181,7 +181,7 @@ export async function getInvoiceForPaymentNotice(invoiceId: string) {
   const organizationId = await getOrganizationId()
   const { data, error } = await supabase
     .from("invoices")
-    .select("id, tenant_id")
+    .select("id, tenant_id, balance, invoice_number")
     .eq("organization_id", organizationId)
     .eq("id", invoiceId)
     .maybeSingle()

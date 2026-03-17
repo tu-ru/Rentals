@@ -17,6 +17,31 @@ const eventTemplates: Record<Payload["event_type"], { type: string; title: strin
   lease_expiry_warning: { type: "lease_expiry", title: "Lease expiry warning", body: "Your lease expires in 30 days." },
 }
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
+const SERVICE_SECRET = Deno.env.get("SERVICE_SECRET") ?? ""
+
+async function getSmsAutomation(supabase: any, organizationId: string) {
+  const { data } = await supabase.from("organizations").select("settings").eq("id", organizationId).single()
+  const settings = (data?.settings ?? {}) as Record<string, any>
+  return (settings.sms_automation ?? {}) as Record<string, any>
+}
+
+async function sendAutomatedSms(payload: Record<string, unknown>, automationKey: string, supabase: any) {
+  if (!SUPABASE_URL || !SERVICE_SECRET) return
+  const orgId = payload.organization_id as string
+  if (!orgId) return
+  const automation = await getSmsAutomation(supabase, orgId)
+  if (automation?.[automationKey] === false) return
+  await fetch(`${SUPABASE_URL}/functions/v1/send-sms`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Service-Secret": SERVICE_SECRET,
+    },
+    body: JSON.stringify({ ...payload, is_automated: true }),
+  })
+}
+
 serve(async (req) => {
   try {
     const payload = (await req.json()) as Payload
@@ -40,6 +65,25 @@ serve(async (req) => {
 
     const { error } = await supabase.from("notifications").insert(rows)
     if (error) throw error
+
+    if (payload.event_type === "payment_received") {
+      const metadata = payload.metadata ?? {}
+      await sendAutomatedSms(
+        {
+          organization_id: payload.organization_id,
+          tenant_id: metadata.tenant_id,
+          message_type: "payment_confirmed",
+          related_payment_id: metadata.payment_id,
+          template_variables: {
+            amount: `KES ${metadata.amount}`,
+            transaction_id: metadata.mpesa_transaction_id ?? "Manual",
+            balance: `KES ${metadata.remaining_balance}`,
+          },
+        },
+        "payment_confirmed",
+        supabase,
+      )
+    }
 
     return new Response(JSON.stringify({ created: rows.length }), { headers: { "Content-Type": "application/json" } })
   } catch (error) {

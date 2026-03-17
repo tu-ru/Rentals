@@ -1,4 +1,4 @@
-import { motion } from "framer-motion"
+﻿import { motion } from "framer-motion"
 import {
   BarChart3,
   Building2,
@@ -9,13 +9,14 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  MessageSquareText,
   Receipt,
   Settings,
   Shield,
   Users,
   Wrench,
 } from "lucide-react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 import { useAuth } from "../../app/providers"
 import { useSidebarStore } from "../../hooks/useSidebarStore"
 import { useUnreadCount } from "../../features/messaging/hooks"
@@ -30,17 +31,23 @@ const navItems = [
   { label: "Leases", href: "/dashboard/leases", icon: FileText },
   { label: "Payments", href: "/dashboard/payments", icon: CreditCard },
   { label: "Invoices", href: "/dashboard/invoices", icon: Receipt },
-  { label: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
+  { label: "Maintenance", href: "/dashboard/maintenance", icon: Wrench },
+  { label: "SMS", href: "/dashboard/sms", icon: MessageSquareText },
   { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
+function getInitials(name?: string | null) {
+  if (!name) return "?"
+  const parts = name.trim().split(/\s+/)
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")
+}
+
 export function Sidebar() {
   const { isCollapsed, toggle } = useSidebarStore()
-  const { pathname } = useLocation()
   const { data: unreadCount = 0 } = useUnreadCount()
-  const { signOut } = useAuth()
+  const { signOut, profile, user } = useAuth()
 
   const handleSignOut = async () => {
     try {
@@ -50,31 +57,47 @@ export function Sidebar() {
     }
   }
 
+  const displayName = profile?.full_name || user?.email || "User"
+  const roleLabel = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : "Member"
+  const email = user?.email ?? ""
+
   return (
     <motion.aside
       layout
       transition={{ duration: 0.2 }}
-      className="flex h-screen shrink-0 flex-col border-r border-border bg-card"
-      animate={{ width: isCollapsed ? 64 : 240 }}
+      className="flex h-screen shrink-0 flex-col border-r border-border bg-card/90 backdrop-blur"
+      animate={{ width: isCollapsed ? 64 : 252 }}
     >
-      <div className="flex h-16 items-center gap-2 border-b border-border px-4">
-        <Shield className="h-5 w-5 text-primary" />
-        {!isCollapsed && <span className="font-semibold">RentMS</span>}
+      <div className="flex h-16 items-center gap-3 border-b border-border px-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Shield className="h-5 w-5" />
+        </div>
+        {!isCollapsed && (
+          <div className="leading-tight">
+            <p className="text-sm font-semibold">RentMS</p>
+            <p className="text-xs text-muted-foreground">Property Suite</p>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-between p-2">
+      <div className="flex flex-1 flex-col justify-between px-2 py-3">
         <div className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+            const end = item.href === "/dashboard"
 
             return (
               <NavLink
+                end={end}
                 key={item.href}
                 to={item.href}
-                className={`flex h-10 items-center rounded-md px-3 text-sm transition-colors ${
-                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                } ${isCollapsed ? "justify-center" : "gap-3"}`}
+                className={({ isActive }) =>
+                  `relative flex h-10 items-center rounded-lg px-3 text-sm transition-colors ${
+                    isActive
+                      ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  } ${isCollapsed ? "justify-center" : "gap-3"} ${isActive ? "after:absolute after:left-1 after:top-1/2 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-primary" : "after:hidden"}`
+                }
               >
                 <Icon className="h-4 w-4" />
                 {!isCollapsed && <span>{item.label}</span>}
@@ -84,7 +107,7 @@ export function Sidebar() {
           })}
         </div>
 
-        <Button variant="ghost" onClick={toggle} className="mt-2 w-full justify-center">
+        <Button variant="ghost" onClick={toggle} className="mt-3 w-full justify-center text-xs uppercase tracking-wide">
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           {!isCollapsed && <span className="ml-2">Collapse</span>}
         </Button>
@@ -93,12 +116,13 @@ export function Sidebar() {
       <div className="border-t border-border p-3">
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
           <Avatar className="h-9 w-9">
-            <AvatarFallback>LK</AvatarFallback>
+            <AvatarFallback>{getInitials(profile?.full_name || user?.email)}</AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">Landlord Kenya</p>
-              <p className="truncate text-xs text-muted-foreground">landlord@rentms.app</p>
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+              <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
             </div>
           )}
           {!isCollapsed && (

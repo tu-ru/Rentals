@@ -1,4 +1,4 @@
-import { DndContext, type DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core"
+﻿import { DndContext, type DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core"
 import type { UserRole } from "../../../types"
 import type { MaintenanceRequest } from "../types"
 import { Badge } from "../../../components/ui/badge"
@@ -29,13 +29,15 @@ export function MaintenanceKanban({
   onOpenStatus,
 }: {
   requests: MaintenanceRequest[]
-  onStatusChange: (id: string, status: MaintenanceRequest["status"]) => void
+  onStatusChange: (request: MaintenanceRequest, status: MaintenanceRequest["status"]) => void
   role: UserRole
   onOpenStatus: (request: MaintenanceRequest) => void
 }) {
   const onDragEnd = (event: DragEndEvent) => {
     if (!event.over) return
-    onStatusChange(String(event.active.id), event.over.id as MaintenanceRequest["status"])
+    const request = requests.find((item) => item.id === String(event.active.id))
+    if (!request) return
+    onStatusChange(request, event.over.id as MaintenanceRequest["status"])
   }
 
   return (

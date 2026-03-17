@@ -1,6 +1,6 @@
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
+﻿import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import * as authService from "../../features/auth/services/authService"
 import { supabase } from "../../lib/supabase/client"
 import type { AuthState, Organization, UserProfile, UserRole } from "../../types/auth.types"
@@ -24,19 +24,26 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 function roleHome(role?: UserRole | null) {
-  if (role === "tenant") return "/tenant"
-  if (role === "agent") return "/agent"
+  const normalizedRole = role?.trim().toLowerCase()
+  if (normalizedRole === "tenant") return "/tenant"
+  if (normalizedRole === "agent") return "/agent"
   return "/dashboard"
 }
 
 function shouldRedirectFromAuthEvent(event: AuthChangeEvent) {
-  return event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "PASSWORD_RECOVERY"
+  return event === "SIGNED_IN" || event === "PASSWORD_RECOVERY"
+}
+
+function isAuthRoute(pathname: string) {
+  return pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/onboarding")
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const mountedRef = useRef(true)
   const authRequestIdRef = useRef(0)
+  const hasRedirectedRef = useRef(false)
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [organization, setOrganization] = useState<Organization | null>(null)
@@ -52,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null)
       setOrganization(null)
       setLoading(false)
+      setInitialized(true)
       return null
     }
 
@@ -60,17 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const nextProfile = await authService.getProfile(nextUser.id)
       if (!mountedRef.current || requestId !== authRequestIdRef.current) return null
-      setProfile(nextProfile)
+      const normalizedRole = nextProfile?.role ? (nextProfile.role.trim().toLowerCase() as UserRole) : nextProfile?.role
+      const normalizedProfile = nextProfile ? { ...nextProfile, role: (normalizedRole ?? nextProfile.role) as UserRole } : nextProfile
+      setProfile(normalizedProfile)
 
-      if (nextProfile?.organization_id) {
-        const nextOrg = await authService.getOrganization(nextProfile.organization_id)
+      if (normalizedProfile?.organization_id) {
+        const nextOrg = await authService.getOrganization(normalizedProfile.organization_id)
         if (!mountedRef.current || requestId !== authRequestIdRef.current) return null
         setOrganization(nextOrg)
       } else {
         setOrganization(null)
       }
 
-      return nextProfile
+      return normalizedProfile
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       if (message.includes("Lock broken by another request")) {
@@ -99,13 +109,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setInitialized(true)
 
       if (!session?.user) {
+        hasRedirectedRef.current = false
         if (event === "SIGNED_OUT") {
           navigate("/login", { replace: true })
         }
         return
       }
 
-      if (!nextProfile || !shouldRedirectFromAuthEvent(event)) {
+      if (!nextProfile) {
+        return
+      }
+
+      if (!shouldRedirectFromAuthEvent(event)) {
+        return
+      }
+
+      if (!isAuthRoute(location.pathname) || hasRedirectedRef.current) {
         return
       }
 
@@ -114,8 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         navigate(roleHome(nextProfile.role), { replace: true })
       }
+      hasRedirectedRef.current = true
     },
-    [loadUserData, navigate],
+    [loadUserData, navigate, location.pathname],
   )
 
   useEffect(() => {
@@ -161,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sendMagicLink = useCallback(
-    async (email: string, metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>) => {
+    async (email, metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>) => {
       await authService.signInWithMagicLink(email, metadata)
     },
     [],

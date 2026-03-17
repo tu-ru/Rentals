@@ -1,4 +1,4 @@
-import { Menu, Shield } from "lucide-react"
+import { CreditCard, FileText, LayoutDashboard, Menu, MessageCircle, Shield, Wrench } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 import { Link, NavLink } from "react-router-dom"
@@ -15,11 +15,11 @@ import {
 } from "../ui/dropdown-menu"
 
 const navItems = [
-  { label: "Dashboard", href: "/tenant" },
-  { label: "Invoices", href: "/tenant/invoices" },
-  { label: "Payments", href: "/tenant/payments" },
-  { label: "Maintenance", href: "/tenant/maintenance" },
-  { label: "Messages", href: "/tenant/messages" },
+  { label: "Dashboard", href: "/tenant", icon: LayoutDashboard },
+  { label: "Invoices", href: "/tenant/invoices", icon: FileText },
+  { label: "Payments", href: "/tenant/payments", icon: CreditCard },
+  { label: "Maintenance", href: "/tenant/maintenance", icon: Wrench },
+  { label: "Messages", href: "/tenant/messages", icon: MessageCircle },
 ]
 
 export function TenantLayout({ children, title }: { children: ReactNode; title: string }) {
@@ -29,7 +29,7 @@ export function TenantLayout({ children, title }: { children: ReactNode; title: 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button className="md:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
@@ -50,7 +50,10 @@ export function TenantLayout({ children, title }: { children: ReactNode; title: 
                   `rounded-md px-3 py-2 text-sm ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`
                 }
               >
-                {item.label}
+                <span className="inline-flex items-center gap-2">
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </span>
               </NavLink>
             ))}
           </nav>
@@ -95,7 +98,10 @@ export function TenantLayout({ children, title }: { children: ReactNode; title: 
                     `block rounded-md px-3 py-2 text-sm ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`
                   }
                 >
-                  {item.label}
+                  <span className="inline-flex items-center gap-2">
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </span>
                 </NavLink>
               ))}
             </nav>
@@ -103,10 +109,28 @@ export function TenantLayout({ children, title }: { children: ReactNode; title: 
         </div>
       )}
 
-      <main className="mx-auto max-w-7xl p-4 sm:p-6">
+      <main className="mx-auto max-w-6xl p-4 pb-20 sm:p-6 md:pb-6">
         <h1 className="mb-4 text-xl font-semibold md:hidden">{title}</h1>
         {children}
       </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur md:hidden">
+        <div className="mx-auto grid max-w-6xl grid-cols-5">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              end={item.href === "/tenant"}
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-1 px-2 py-2 text-[11px] ${isActive ? "text-primary" : "text-muted-foreground"}`
+              }
+            >
+              <item.icon className={`h-5 w-5 ${item.href === "/tenant/messages" ? "relative" : ""}`} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
     </div>
   )
 }
