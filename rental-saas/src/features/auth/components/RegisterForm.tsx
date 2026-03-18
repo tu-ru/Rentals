@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { z } from "zod"
 import { useAuth } from "../../../app/providers"
 import * as authService from "../services/authService"
@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Progress } from "../../../components/ui/progress"
+import { useToast } from "../../../components/ui/toast"
 import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const schema = z
@@ -31,9 +32,9 @@ type Values = z.infer<typeof schema>
 export function RegisterForm() {
   const navigate = useNavigate()
   const { signUp } = useAuth()
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -42,7 +43,6 @@ export function RegisterForm() {
 
   const submit = form.handleSubmit(async (values) => {
     setSubmitting(true)
-    setSubmitError(null)
     try {
       const { user, session } = await signUp(values.email, values.password, {
         full_name: values.full_name,
@@ -51,7 +51,10 @@ export function RegisterForm() {
       })
 
       if (!session) {
-        setSubmitError("Account created. Please confirm your email, then sign in to finish setup.")
+        toast({
+          title: "Confirm your email",
+          description: "We sent a verification link. Confirm it, then sign in to finish setup.",
+        })
         return
       }
 
@@ -63,17 +66,26 @@ export function RegisterForm() {
         role: values.role,
       })
 
+      toast({
+        title: "Account created",
+        description: "Your workspace is ready. Let’s finish onboarding.",
+      })
       navigate("/onboarding", { replace: true })
     } catch (error) {
-      setSubmitError(handleSupabaseError(error))
+      toast({
+        title: "Sign up failed",
+        description: handleSupabaseError(error),
+        variant: "destructive",
+      })
     } finally {
       setSubmitting(false)
     }
   })
 
   return (
-    <form className="space-y-5" onSubmit={submit}>
-      <Progress value={(step / 2) * 100} />
+    <div className="space-y-5">
+      <form className="space-y-5" onSubmit={submit}>
+        <Progress value={(step / 2) * 100} />
 
       {step === 1 && (
         <div className="space-y-4">
@@ -123,24 +135,31 @@ export function RegisterForm() {
         </div>
       )}
 
-      <div className="flex justify-between gap-2">
-        {step > 1 ? (
-          <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)}>
-            Back
-          </Button>
-        ) : (
-          <span />
-        )}
+        <div className="flex justify-between gap-2">
+          {step > 1 ? (
+            <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)}>
+              Back
+            </Button>
+          ) : (
+            <span />
+          )}
 
-        {step < 2 ? (
-          <Button type="button" onClick={() => setStep((s) => s + 1)}>
-            Next
-          </Button>
-        ) : (
-          <Button disabled={submitting}>{submitting ? "Creating account..." : "Create account"}</Button>
-        )}
-      </div>
-      {submitError && <p className="text-sm text-red-500">{submitError}</p>}
-    </form>
+          {step < 2 ? (
+            <Button type="button" onClick={() => setStep((s) => s + 1)}>
+              Next
+            </Button>
+          ) : (
+            <Button disabled={submitting}>{submitting ? "Creating account..." : "Create account"}</Button>
+          )}
+        </div>
+      </form>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </div>
   )
 }

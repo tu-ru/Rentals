@@ -45,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mountedRef = useRef(true)
   const authRequestIdRef = useRef(0)
   const hasRedirectedRef = useRef(false)
+  const userRef = useRef<User | null>(null)
+  const locationRef = useRef(location.pathname)
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [organization, setOrganization] = useState<Organization | null>(null)
@@ -103,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleAuthStateChange = useCallback(
     async (event: AuthChangeEvent, session: Session | null) => {
       if (!mountedRef.current) return
-      const wasSignedIn = Boolean(user)
+      const wasSignedIn = Boolean(userRef.current)
 
       const nextProfile = await loadUserData(session?.user ?? null)
       if (!mountedRef.current) return
@@ -126,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (!isAuthRoute(location.pathname) || hasRedirectedRef.current) {
+      if (!isAuthRoute(locationRef.current) || hasRedirectedRef.current) {
         return
       }
 
@@ -141,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       hasRedirectedRef.current = true
     },
-    [loadUserData, navigate, location.pathname, user],
+    [loadUserData, navigate],
   )
 
   useEffect(() => {
@@ -160,6 +162,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.subscription.unsubscribe()
     }
   }, [handleAuthStateChange])
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    locationRef.current = location.pathname
+  }, [location.pathname])
 
   const signIn = useCallback(async (email: string, password: string) => {
     setLoading(true)

@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs"
+import { useToast } from "../../../components/ui/toast"
 import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const passwordSchema = z.object({
@@ -25,8 +26,8 @@ type MagicValues = z.infer<typeof magicSchema>
 
 export function LoginForm() {
   const { signIn, sendMagicLink, loading } = useAuth()
+  const { toast } = useToast()
   const [magicSent, setMagicSent] = useState(false)
-  const [authError, setAuthError] = useState<string | null>(null)
 
   const passwordForm = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema) })
   const magicForm = useForm<MagicValues>({ resolver: zodResolver(magicSchema) })
@@ -43,10 +44,20 @@ export function LoginForm() {
           <form
             className="space-y-4"
             onSubmit={passwordForm.handleSubmit(async (values) => {
-              setAuthError(null)
-              await signIn(values.email, values.password).catch((error: unknown) => {
-                setAuthError(handleSupabaseError(error))
-              })
+              await signIn(values.email, values.password)
+                .then(() => {
+                  toast({
+                    title: "Welcome back",
+                    description: "Signing you in and preparing your dashboard.",
+                  })
+                })
+                .catch((error: unknown) => {
+                  toast({
+                    title: "Sign in failed",
+                    description: handleSupabaseError(error),
+                    variant: "destructive",
+                  })
+                })
             })}
           >
             <div className="space-y-2">
@@ -62,7 +73,6 @@ export function LoginForm() {
             <Button className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
-            {authError && <p className="text-sm text-red-500">{authError}</p>}
           </form>
         </TabsContent>
 
@@ -70,12 +80,21 @@ export function LoginForm() {
           <form
             className="space-y-4"
             onSubmit={magicForm.handleSubmit(async (values) => {
-              setAuthError(null)
               setMagicSent(false)
               await sendMagicLink(values.email)
-                .then(() => setMagicSent(true))
+                .then(() => {
+                  setMagicSent(true)
+                  toast({
+                    title: "Magic link sent",
+                    description: "Check your email to finish signing in.",
+                  })
+                })
                 .catch((error: unknown) => {
-                  setAuthError(handleSupabaseError(error))
+                  toast({
+                    title: "Could not send magic link",
+                    description: handleSupabaseError(error),
+                    variant: "destructive",
+                  })
                 })
             })}
           >
@@ -87,7 +106,6 @@ export function LoginForm() {
             <Button className="w-full" disabled={loading}>
               Send Magic Link
             </Button>
-            {authError && <p className="text-sm text-red-500">{authError}</p>}
             <AnimatePresence>
               {magicSent && (
                 <motion.p
