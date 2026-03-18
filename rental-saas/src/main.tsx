@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client"
 import { BrowserRouter } from "react-router-dom"
 import { AuthProvider, ThemeProvider } from "./app/providers"
 import { AppRouter } from "./app/router"
+import { Toaster } from "./components/ui/toast"
 import "./styles/globals.css"
 
 const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <ThemeProvider>
           <AuthProvider>
             <AppRouter />
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>

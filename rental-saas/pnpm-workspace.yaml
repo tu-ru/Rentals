@@ -1,5 +1,3 @@
-ignoredBuiltDependencies:
-  - supabase
-
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true
+  supabase: true

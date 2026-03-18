@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import * as authService from "../../features/auth/services/authService"
 import { supabase } from "../../lib/supabase/client"
 import type { AuthState, Organization, UserProfile, UserRole } from "../../types/auth.types"
+import { toast } from "../../components/ui/toast"
 
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<void>
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleAuthStateChange = useCallback(
     async (event: AuthChangeEvent, session: Session | null) => {
       if (!mountedRef.current) return
+      const wasSignedIn = Boolean(user)
 
       const nextProfile = await loadUserData(session?.user ?? null)
       if (!mountedRef.current) return
@@ -128,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      if (wasSignedIn) {
+        toast({ title: "Already signed in", description: "Taking you back to your dashboard." })
+      }
+
       if (!nextProfile.organization_id) {
         navigate("/onboarding", { replace: true })
       } else {
@@ -135,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       hasRedirectedRef.current = true
     },
-    [loadUserData, navigate, location.pathname],
+    [loadUserData, navigate, location.pathname, user],
   )
 
   useEffect(() => {

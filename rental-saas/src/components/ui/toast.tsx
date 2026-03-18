@@ -1,3 +1,6 @@
+import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner"
+import { useTheme } from "../../app/providers"
+
 export type ToastOptions = {
   title: string
   description?: string
@@ -5,11 +8,12 @@ export type ToastOptions = {
 }
 
 export function toast(options: ToastOptions) {
-  if (typeof window !== "undefined") {
-    // Minimal non-blocking notification placeholder
-    // eslint-disable-next-line no-console
-    console.log(`[toast:${options.variant ?? "default"}] ${options.title}${options.description ? ` - ${options.description}` : ""}`)
+  const { title, description, variant } = options
+  if (variant === "destructive") {
+    sonnerToast.error(title, { description })
+    return
   }
+  sonnerToast(title, { description })
 }
 
 export function useToast() {
@@ -17,5 +21,18 @@ export function useToast() {
 }
 
 export function Toaster() {
-  return null
+  const { resolvedTheme } = useTheme()
+
+  return (
+    <SonnerToaster
+      theme={resolvedTheme}
+      position="top-right"
+      closeButton
+      richColors
+      toastOptions={{
+        className: "border border-border bg-background text-foreground shadow-xl",
+        descriptionClassName: "text-muted-foreground",
+      }}
+    />
+  )
 }

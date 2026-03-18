@@ -330,7 +330,7 @@ export function OrganizationSettingsPanel() {
               <CardTitle>Templates</CardTitle>
             </CardHeader>
             <CardContent>
-              <Link to="/dashboard/sms" className="text-sm text-primary">Manage SMS Templates -></Link>
+              <Link to="/dashboard/sms" className="text-sm text-primary">Manage SMS Templates</Link>
             </CardContent>
           </Card>
         </TabsContent>

@@ -8,6 +8,10 @@ import { LoginPage } from "../../pages/auth/LoginPage"
 import { RegisterPage } from "../../pages/auth/RegisterPage"
 import { OnboardingPage } from "../../pages/auth/OnboardingPage"
 import { LandingPage } from "../../pages/LandingPage"
+import { AboutPage } from "../../pages/marketing/AboutPage"
+import { FeaturesPage } from "../../pages/marketing/FeaturesPage"
+import { PricingPage } from "../../pages/marketing/PricingPage"
+import { ContactPage } from "../../pages/marketing/ContactPage"
 import { NotFoundPage } from "../../pages/NotFound"
 import { DashboardHomePage } from "../../pages/dashboard/DashboardHomePage"
 import { PropertiesPage } from "../../pages/dashboard/PropertiesPage"
@@ -47,6 +51,10 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route
         path="/login"
         element={

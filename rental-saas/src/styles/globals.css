@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:wght@600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -38,7 +38,7 @@
   --input: 240 3.7% 15.9%;
   --ring: 217 91% 60%;
   --primary: 217 91% 60%;
-  --primary-foreground: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 0 0% 98%;
   --muted: 240 3.7% 15.9%;
@@ -57,4 +57,137 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+}
+
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply bg-background text-foreground placeholder:text-muted-foreground;
+  }
+
+  textarea {
+    @apply border-input;
+  }
+
+  input[type="file"] {
+    @apply text-foreground;
+  }
+
+  input[type="file"]::file-selector-button {
+    @apply mr-3 rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-foreground transition-colors;
+  }
+
+  input[type="file"]::file-selector-button:hover {
+    @apply bg-muted/70;
+  }
+
+  input[type="file"]::-webkit-file-upload-button {
+    @apply mr-3 rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-foreground transition-colors;
+  }
+
+  input[type="file"]::-webkit-file-upload-button:hover {
+    @apply bg-muted/70;
+  }
+}
+
+/* Modern thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.4);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.6);
+}
+
+.dark * {
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.45);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.7);
+}
+
+/* Sonner toasts - branded styling */
+:root {
+  --toast-bg: hsl(var(--background) / 0.96);
+  --toast-fg: hsl(var(--foreground));
+  --toast-border: hsl(var(--border));
+  --toast-shadow: 0 18px 38px -28px rgba(15, 23, 42, 0.55);
+  --toast-ring: 0 0 0 1px hsl(var(--border));
+  --toast-accent: hsl(var(--primary));
+  --toast-accent-foreground: hsl(var(--primary-foreground));
+  --toast-destructive: hsl(var(--destructive));
+  --toast-destructive-foreground: hsl(var(--destructive-foreground));
+}
+
+.dark {
+  --toast-bg: hsl(var(--background) / 0.92);
+  --toast-fg: hsl(var(--foreground));
+  --toast-border: hsl(var(--border));
+  --toast-shadow: 0 20px 40px -26px rgba(2, 6, 23, 0.7);
+  --toast-ring: 0 0 0 1px hsl(var(--border));
+}
+
+[data-sonner-toaster] {
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+
+[data-sonner-toast] {
+  border-radius: 16px;
+  border: 1px solid var(--toast-border);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  box-shadow: var(--toast-shadow);
+  backdrop-filter: blur(10px);
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-color: color-mix(in oklab, var(--toast-accent) 40%, var(--toast-border));
+}
+
+[data-sonner-toast][data-type="error"] {
+  border-color: color-mix(in oklab, var(--toast-destructive) 40%, var(--toast-border));
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+[data-sonner-toast] [data-description] {
+  color: color-mix(in oklab, var(--toast-fg) 70%, transparent);
+}
+
+[data-sonner-toast] button {
+  border-radius: 999px;
+  border: 1px solid var(--toast-border);
+  background: transparent;
+  color: var(--toast-fg);
+}
+
+[data-sonner-toast] button:hover {
+  background: color-mix(in oklab, var(--toast-accent) 12%, transparent);
+  border-color: color-mix(in oklab, var(--toast-accent) 35%, var(--toast-border));
 }

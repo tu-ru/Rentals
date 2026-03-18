@@ -39,8 +39,20 @@ export function DialogContent({ children, className }: { children: ReactNode; cl
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-      <div className={cn("w-full max-w-lg rounded-lg border bg-background p-6 shadow-xl", className)} onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onClick={() => setOpen(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={cn(
+          "w-full max-w-lg rounded-lg border bg-background p-6 shadow-xl",
+          "max-h-[85vh] overflow-y-auto",
+          className,
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>
