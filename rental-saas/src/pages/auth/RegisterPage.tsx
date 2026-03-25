@@ -14,7 +14,7 @@ export function RegisterPage() {
     if (!initialized || !user || notifiedRef.current) return
     notifiedRef.current = true
     const normalizedRole = profile?.role ? (profile.role.trim().toLowerCase() as UserRole) : undefined
-    const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : "/dashboard"
+    const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : normalizedRole === "super_admin" ? "/super-admin" : "/dashboard"
     toast({ title: "You're already signed in", description: "Redirecting you to your dashboard." })
     navigate(dashboardHref, { replace: true })
   }, [initialized, user, profile, navigate])

@@ -1,12 +1,13 @@
 import type { ReactElement } from "react"
 import { Navigate, Outlet, Route, Routes } from "react-router-dom"
-import { AuthLayout, DashboardShell } from "../../components/layouts"
+import { AuthLayout, DashboardShell, SuperAdminShell } from "../../components/layouts"
 import { useAuth } from "../providers"
 import { PrivateRoute } from "./PrivateRoute"
 import { RoleRoute } from "./RoleRoute"
 import { LoginPage } from "../../pages/auth/LoginPage"
-import { RegisterPage } from "../../pages/auth/RegisterPage"
 import { OnboardingPage } from "../../pages/auth/OnboardingPage"
+import { InviteRequiredPage } from "../../pages/auth/InviteRequiredPage"
+import { OrganizationArchivedPage } from "../../pages/auth/OrganizationArchivedPage"
 import { LandingPage } from "../../pages/LandingPage"
 import { AboutPage } from "../../pages/marketing/AboutPage"
 import { FeaturesPage } from "../../pages/marketing/FeaturesPage"
@@ -31,11 +32,14 @@ import { TenantInvoicesPage } from "../../pages/tenant/TenantInvoicesPage"
 import { TenantPaymentsPage } from "../../pages/tenant/TenantPaymentsPage"
 import { TenantMaintenancePage } from "../../pages/tenant/TenantMaintenancePage"
 import { TenantMessagesPage } from "../../pages/tenant/TenantMessagesPage"
+import { SuperAdminHomePage } from "../../pages/super-admin/SuperAdminHomePage"
 
 function RoleRedirect() {
   const { profile } = useAuth()
+  if (!profile?.organization_id && profile?.role !== "super_admin") return <Navigate to="/invite-required" replace />
   if (profile?.role === "tenant") return <Navigate to="/tenant" replace />
   if (profile?.role === "agent") return <Navigate to="/agent" replace />
+  if (profile?.role === "super_admin") return <Navigate to="/super-admin" replace />
   return <Navigate to="/dashboard" replace />
 }
 
@@ -64,10 +68,18 @@ export function AppRouter() {
         }
       />
       <Route
-        path="/register"
+        path="/invite-required"
         element={
-          <AuthWrapped title="Create account" subtitle="Start your workspace setup">
-            <RegisterPage />
+          <AuthWrapped title="Invitation required" subtitle="Your account must be provisioned by a super admin">
+            <InviteRequiredPage />
+          </AuthWrapped>
+        }
+      />
+      <Route
+        path="/organization-archived"
+        element={
+          <AuthWrapped title="Organization archived" subtitle="This workspace has been disabled">
+            <OrganizationArchivedPage />
           </AuthWrapped>
         }
       />
@@ -101,6 +113,17 @@ export function AppRouter() {
         <Route path="messages" element={<MessagesPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+      </Route>
+
+      <Route
+        path="/super-admin"
+        element={
+          <RoleRoute allowedRoles={["super_admin"]}>
+            <SuperAdminShell />
+          </RoleRoute>
+        }
+      >
+        <Route index element={<SuperAdminHomePage />} />
       </Route>
 
       <Route

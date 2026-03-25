@@ -47,7 +47,7 @@ export async function getMessages(conversationId: string, limit = 50, before?: s
   return ((data ?? []) as MessageWithSender[]).reverse()
 }
 
-export async function createConversation(title: string, memberIds: string[], organizationId: string, isGroup = false) {
+export async function createConversation(title: string, memberIds: string[], organizationId: string, isGroup = false, propertyId?: string | null) {
   const {
     data: { session },
     error: sessionError,
@@ -58,7 +58,7 @@ export async function createConversation(title: string, memberIds: string[], org
 
   const { data, error } = await supabase
     .from("conversations")
-    .insert({ title: title || null, organization_id: organizationId, is_group: isGroup, created_by: user.id })
+    .insert({ title: title || null, organization_id: organizationId, is_group: isGroup, created_by: user.id, property_id: propertyId ?? null })
     .select("*")
     .single()
   if (error) throw error
@@ -92,7 +92,7 @@ export async function markAsRead(conversationId: string, profileId: string): Pro
   if (error) throw error
 }
 
-export async function getOrCreateDirectConversation(profileIdA: string, profileIdB: string, organizationId: string) {
+export async function getOrCreateDirectConversation(profileIdA: string, profileIdB: string, organizationId: string, propertyId?: string | null) {
   const { data: memberships, error } = await supabase
     .from("conversation_members")
     .select("conversation_id, profile_id")
@@ -117,7 +117,7 @@ export async function getOrCreateDirectConversation(profileIdA: string, profileI
     }
   }
 
-  return createConversation("", [profileIdA, profileIdB], organizationId, false)
+  return createConversation("", [profileIdA, profileIdB], organizationId, false, propertyId)
 }
 
 export async function getUnreadCount(profileId: string) {

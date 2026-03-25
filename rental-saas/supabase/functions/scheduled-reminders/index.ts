@@ -3,6 +3,11 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+}
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -165,7 +170,11 @@ async function runLeaseExpiryWarnings(targetDate: string) {
   return { scanned: data.length, created: payload.length }
 }
 
-serve(async () => {
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders })
+  }
+
   const today = new Date()
   const plus3 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
   const plus30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -184,12 +193,12 @@ serve(async () => {
         upcoming,
         expiry,
       }),
-      { headers: { "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     )
   } catch (error) {
     return new Response(JSON.stringify({ success: false, error: String(error) }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
 })

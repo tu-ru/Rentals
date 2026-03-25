@@ -25,7 +25,7 @@ type PasswordValues = z.infer<typeof passwordSchema>
 type MagicValues = z.infer<typeof magicSchema>
 
 export function LoginForm() {
-  const { signIn, sendMagicLink, loading } = useAuth()
+  const { signIn, requestMagicLink, loading } = useAuth()
   const { toast } = useToast()
   const [magicSent, setMagicSent] = useState(false)
 
@@ -81,7 +81,7 @@ export function LoginForm() {
             className="space-y-4"
             onSubmit={magicForm.handleSubmit(async (values) => {
               setMagicSent(false)
-              await sendMagicLink(values.email)
+              await requestMagicLink(values.email)
                 .then(() => {
                   setMagicSent(true)
                   toast({
@@ -123,9 +123,9 @@ export function LoginForm() {
       </Tabs>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link to="/register" className="text-primary hover:underline">
-          Register
+        Need access?{" "}
+        <Link to="/contact" className="text-primary hover:underline">
+          Contact a super admin
         </Link>
       </p>
     </motion.div>

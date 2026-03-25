@@ -10,7 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui
 import { useToast } from "../../../components/ui/toast"
 import { supabase } from "../../../lib/supabase/client"
 import { handleSupabaseError } from "../../../lib/utils/errors"
-import { useOrganizationSettings, useTeamMembers, useUpdateOrganizationSettings, useUpdateTeamMemberStatus } from "../hooks"
+import * as authService from "../../auth/services/authService"
+import {
+  useAgentPropertyAssignments,
+  useOrganizationProperties,
+  useOrganizationSettings,
+  useReplaceAgentAssignments,
+  useTeamMembers,
+  useUpdateOrganizationSettings,
+  useUpdateTeamMemberStatus,
+} from "../hooks"
 import type { NotificationPreferences, SmsAutomationPreferences, StaffInviteInput, SubscriptionPlan } from "../types"
 
 const plans: SubscriptionPlan[] = ["free", "starter", "pro", "enterprise"]
@@ -36,11 +45,14 @@ function slugify(name: string) {
 }
 
 export function OrganizationSettingsPanel() {
-  const { profile, sendMagicLink } = useAuth()
+  const { profile } = useAuth()
   const { data: organization } = useOrganizationSettings()
   const { data: teamMembers = [] } = useTeamMembers()
+  const { data: propertyOptions = [] } = useOrganizationProperties()
+  const { data: agentAssignments = [] } = useAgentPropertyAssignments()
   const updateOrganization = useUpdateOrganizationSettings()
   const updateMemberStatus = useUpdateTeamMemberStatus()
+  const replaceAgentAssignments = useReplaceAgentAssignments()
   const { toast } = useToast()
 
   const [name, setName] = useState("")
@@ -55,16 +67,21 @@ export function OrganizationSettingsPanel() {
   const [smsApiKey, setSmsApiKey] = useState("")
   const [smsPartnerId, setSmsPartnerId] = useState("")
   const [smsShortcode, setSmsShortcode] = useState("")
+  const [mpesaConsumerKey, setMpesaConsumerKey] = useState("")
+  const [mpesaConsumerSecret, setMpesaConsumerSecret] = useState("")
   const [smsAutomation, setSmsAutomation] = useState<SmsAutomationPreferences>(defaultSmsAutomation)
   const [smsTestStatus, setSmsTestStatus] = useState<string | null>(null)
   const [smsTesting, setSmsTesting] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [showMpesaSecret, setShowMpesaSecret] = useState(false)
 
   const [inviteEmail, setInviteEmail] = useState("")
-  const [inviteRole, setInviteRole] = useState<"admin" | "agent">("agent")
+  const [inviteRole, setInviteRole] = useState<"landlord" | "admin" | "agent">("agent")
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteStatus, setInviteStatus] = useState<string | null>(null)
   const [inviting, setInviting] = useState(false)
+  const [selectedAgentId, setSelectedAgentId] = useState("")
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!organization) return
@@ -85,11 +102,14 @@ export function OrganizationSettingsPanel() {
     setSmsApiKey((settings.sms_api_key as string) ?? "")
     setSmsPartnerId((settings.sms_partner_id as string) ?? "")
     setSmsShortcode((settings.sms_shortcode as string) ?? "")
+    setMpesaConsumerKey((settings.mpesa_consumer_key as string) ?? "")
+    setMpesaConsumerSecret((settings.mpesa_consumer_secret as string) ?? "")
     const smsPrefs = (settings.sms_automation ?? {}) as Partial<SmsAutomationPreferences>
     setSmsAutomation({ ...defaultSmsAutomation, ...smsPrefs })
   }, [organization])
 
   const canManageTeam = profile?.role === "admin" || profile?.role === "landlord"
+  const canInviteStaff = false
 
   const submitOrganization = async () => {
     if (!organization || !name.trim()) return
@@ -107,6 +127,8 @@ export function OrganizationSettingsPanel() {
         timezone: timezone.trim() || "Africa/Nairobi",
         date_format: dateFormat.trim() || "DD/MM/YYYY",
         notification_preferences: notificationPrefs,
+        mpesa_consumer_key: mpesaConsumerKey.trim() || undefined,
+        mpesa_consumer_secret: mpesaConsumerSecret.trim() || undefined,
         sms_api_key: smsApiKey.trim() || undefined,
         sms_partner_id: smsPartnerId.trim() || undefined,
         sms_shortcode: smsShortcode.trim() || undefined,
@@ -128,7 +150,8 @@ export function OrganizationSettingsPanel() {
         role: inviteRole,
       }
 
-      await sendMagicLink(payload.email, {
+      await authService.inviteUser({
+        email: payload.email,
         role: payload.role,
         organization_id: profile.organization_id,
       })
@@ -143,6 +166,28 @@ export function OrganizationSettingsPanel() {
   }
 
   const activeTeam = useMemo(() => teamMembers.filter((member) => member.is_active).length, [teamMembers])
+  const agents = useMemo(() => teamMembers.filter((member) => member.role === "agent"), [teamMembers])
+  const assignmentsByAgent = useMemo(() => {
+    const out = new Map<string, Array<{ id: string; property_id: string; property_name: string }>>()
+    for (const assignment of agentAssignments) {
+      if (!out.has(assignment.agent_id)) out.set(assignment.agent_id, [])
+      out.get(assignment.agent_id)!.push({
+        id: assignment.id,
+        property_id: assignment.property_id,
+        property_name: assignment.property_name,
+      })
+    }
+    return out
+  }, [agentAssignments])
+
+  useEffect(() => {
+    if (!selectedAgentId) {
+      setSelectedPropertyIds([])
+      return
+    }
+    const assigned = assignmentsByAgent.get(selectedAgentId) ?? []
+    setSelectedPropertyIds(assigned.map((item) => item.property_id))
+  }, [assignmentsByAgent, selectedAgentId])
 
   const togglePreference = (key: keyof NotificationPreferences) => {
     setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -266,9 +311,27 @@ export function OrganizationSettingsPanel() {
         <TabsContent value="sms" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>SMS credentials</CardTitle>
+              <CardTitle>SMS and M-Pesa credentials</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>M-Pesa consumer key</Label>
+                <Input value={mpesaConsumerKey} onChange={(e) => setMpesaConsumerKey(e.target.value)} placeholder="Daraja consumer key" />
+              </div>
+              <div>
+                <Label>M-Pesa consumer secret</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showMpesaSecret ? "text" : "password"}
+                    value={mpesaConsumerSecret}
+                    onChange={(e) => setMpesaConsumerSecret(e.target.value)}
+                    placeholder="Daraja consumer secret"
+                  />
+                  <Button type="button" variant="outline" onClick={() => setShowMpesaSecret((v) => !v)}>
+                    {showMpesaSecret ? "Hide" : "Show"}
+                  </Button>
+                </div>
+              </div>
               <div>
                 <Label>API Key</Label>
                 <div className="flex gap-2">
@@ -291,9 +354,12 @@ export function OrganizationSettingsPanel() {
                   {smsTesting ? "Testing..." : "Test Connection"}
                 </Button>
                 <Button disabled={updateOrganization.isPending} onClick={() => void submitOrganization()}>
-                  Save SMS Settings
+                  Save Credential Settings
                 </Button>
               </div>
+              <p className="text-sm text-muted-foreground md:col-span-2">
+                M-Pesa and SMS credentials are stored per organization so each tester or landlord can use separate provider accounts.
+              </p>
               {smsTestStatus && <p className="text-sm text-muted-foreground">{smsTestStatus}</p>}
             </CardContent>
           </Card>
@@ -343,7 +409,7 @@ export function OrganizationSettingsPanel() {
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">Active team members: {activeTeam}</p>
 
-              {canManageTeam && (
+              {canInviteStaff && (
                 <div className="grid gap-3 md:grid-cols-[1fr_160px_auto]">
                   <Input
                     type="email"
@@ -364,12 +430,71 @@ export function OrganizationSettingsPanel() {
               {inviteError && <p className="text-sm text-red-500">{inviteError}</p>}
               {inviteStatus && <p className="text-sm text-emerald-600">{inviteStatus}</p>}
 
+              {canManageTeam && (
+                <div className="space-y-3 rounded-md border p-4">
+                  <div>
+                    <Label>Agent property assignments</Label>
+                    <p className="text-sm text-muted-foreground">Assign agents only to the properties they should operate on.</p>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <Label>Select agent</Label>
+                      <Select value={selectedAgentId} onChange={(event) => setSelectedAgentId(event.target.value)}>
+                        <option value="">Choose an agent</option>
+                        {agents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>{agent.full_name ?? agent.id}</option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Assigned properties</Label>
+                      <div className="max-h-44 space-y-2 overflow-auto rounded-md border p-3">
+                        {propertyOptions.map((property) => {
+                          const checked = selectedPropertyIds.includes(property.id)
+                          return (
+                            <label key={property.id} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  setSelectedPropertyIds((prev) =>
+                                    checked ? prev.filter((id) => id !== property.id) : [...prev, property.id],
+                                  )
+                                }
+                              />
+                              <span>{property.name}</span>
+                            </label>
+                          )
+                        })}
+                        {!propertyOptions.length && <p className="text-sm text-muted-foreground">No properties available yet.</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      disabled={!selectedAgentId || replaceAgentAssignments.isPending}
+                      onClick={() => void replaceAgentAssignments.mutateAsync({ agentId: selectedAgentId, propertyIds: selectedPropertyIds })}
+                    >
+                      {replaceAgentAssignments.isPending ? "Saving assignments..." : "Save agent assignments"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 {teamMembers.map((member) => (
                   <div key={member.id} className="flex items-center justify-between rounded-md border p-3">
                     <div>
                       <p className="font-medium">{member.full_name || "Unnamed user"}</p>
                       <p className="text-xs text-muted-foreground">{member.role} - {member.phone ?? "No phone"}</p>
+                      {member.role === "agent" && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Assigned properties: {(assignmentsByAgent.get(member.id) ?? []).map((item) => item.property_name).join(", ") || "None"}
+                        </p>
+                      )}
                     </div>
                     <Button
                       variant={member.is_active ? "outline" : "default"}

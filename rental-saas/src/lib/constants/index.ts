@@ -2,6 +2,7 @@ export const APP_NAME = "RentMS Kenya"
 export const APP_VERSION = "1.0.0"
 
 export const ROLES = {
+  SUPER_ADMIN: "super_admin",
   ADMIN: "admin",
   LANDLORD: "landlord",
   AGENT: "agent",
@@ -11,7 +12,7 @@ export const ROLES = {
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
-  REGISTER: "/register",
+  INVITE_REQUIRED: "/invite-required",
   ONBOARDING: "/onboarding",
   DASHBOARD: "/dashboard",
   PROPERTIES: "/dashboard/properties",
@@ -27,6 +28,7 @@ export const ROUTES = {
 } as const
 
 export const QUERY_KEYS = {
+  AGENT: "agent",
   PROPERTIES: "properties",
   UNITS: "units",
   TENANTS: "tenants",

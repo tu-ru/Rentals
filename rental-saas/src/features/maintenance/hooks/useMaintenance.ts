@@ -106,7 +106,10 @@ export function useAssignMaintenanceRequest() {
       }
       return updated
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.AGENT, "workspace"] })
+    },
     onError: (error) => toast({ title: "Failed to assign request", description: String(error), variant: "destructive" }),
   })
 }
@@ -163,7 +166,10 @@ export function useUpdateMaintenanceStatus() {
       }
       return updated
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MAINTENANCE] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.AGENT, "workspace"] })
+    },
     onError: (error) => toast({ title: "Failed to update status", description: String(error), variant: "destructive" }),
   })
 }

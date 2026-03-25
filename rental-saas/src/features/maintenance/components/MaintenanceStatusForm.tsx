@@ -36,10 +36,12 @@ export function MaintenanceStatusForm({
   if (!request) return null
 
   const submit = async () => {
-    if (assignedTo) {
+    const nextAssignedTo = profile?.role === "agent" ? (assignedTo || profile.id || "") : assignedTo
+
+    if (nextAssignedTo) {
       await assignMutation.mutateAsync({
         id: request.id,
-        assignedToId: assignedTo,
+        assignedToId: nextAssignedTo,
         tenantId: request.tenant_id,
         organizationId: profile?.organization_id,
         title: request.title,
@@ -77,15 +79,31 @@ export function MaintenanceStatusForm({
             </Select>
           </div>
 
-          <div>
-            <Label>Assign to staff</Label>
-            <Select value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)}>
-              <option value="">Unassigned</option>
-              {staff.map((member) => (
-                <option key={member.id} value={member.id}>{member.full_name ?? member.id}</option>
-              ))}
-            </Select>
-          </div>
+          {profile?.role === "agent" ? (
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">Assignment</p>
+              <p className="text-muted-foreground">
+                {request.assigned_to === profile.id || assignedTo === profile.id
+                  ? "This request is assigned to you."
+                  : "Saving will assign this request to you."}
+              </p>
+              {request.assigned_to !== profile.id && assignedTo !== profile.id ? (
+                <div className="mt-3">
+                  <Button variant="outline" onClick={() => setAssignedTo(profile?.id ?? "")}>Take ownership</Button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <Label>Assign to staff</Label>
+              <Select value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)}>
+                <option value="">Unassigned</option>
+                {staff.map((member) => (
+                  <option key={member.id} value={member.id}>{member.full_name ?? member.id}</option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label>Resolution Notes {status === "resolved" ? "(required)" : "(optional)"}</Label>

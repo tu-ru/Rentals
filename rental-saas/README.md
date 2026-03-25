@@ -82,6 +82,7 @@ The platform is built as a **multi-tenant SaaS** — each landlord or property m
 ### M-Pesa Integration
 - Uses **Safaricom Daraja Pull Transactions API** for C2B reconciliation
 - Supports both **Sandbox** and **Production** environments simultaneously
+- Stores Daraja consumer key and consumer secret per organization
 - Register Pull API per organization from the Settings page
 - Query transactions for any 48-hour window with automatic pagination
 - All credentials kept server-side in Supabase Edge Functions (never client-exposed)
@@ -315,6 +316,16 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+### Bootstrap The First Super Admin
+
+For a fresh hosted Supabase project, create the first `super_admin` through the bootstrap script instead of writing directly into `auth.users`.
+
+```bash
+npm run bootstrap:super-admin
+```
+
+The script reads `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `SUPER_ADMIN_NAME`, `SUPER_ADMIN_PHONE`, and `SUPER_ADMIN_NATIONAL_ID` from `.env` or `.env.local`.
+
 ---
 
 ## Environment Variables
@@ -332,9 +343,6 @@ Set via `supabase secrets set` or the Supabase dashboard:
 
 | Secret | Description |
 |---|---|
-| `MPESA_CONSUMER_KEY` | Safaricom Daraja app Consumer Key |
-| `MPESA_CONSUMER_SECRET` | Safaricom Daraja app Consumer Secret |
-| `MPESA_ENV` | `sandbox` or `production` |
 | `SERVICE_SECRET` | Random UUID for internal Edge Function auth |
 | `SUPABASE_URL` | Auto-set by Supabase Edge Function runtime |
 | `SUPABASE_SERVICE_ROLE_KEY` | Auto-set by Supabase Edge Function runtime |
@@ -345,10 +353,20 @@ These are set by each landlord in the app's Settings page:
 
 | Key | Description |
 |---|---|
+| `mpesa_consumer_key` | Safaricom Daraja app Consumer Key for this organization |
+| `mpesa_consumer_secret` | Safaricom Daraja app Consumer Secret for this organization |
 | `sms_api_key` | Celcom Africa API Key |
 | `sms_partner_id` | Celcom Africa Partner ID |
 | `sms_shortcode` | SMS Sender ID (e.g. `RENTMS`) |
 | `sms_auto_welcome` | Boolean: send welcome SMS to new tenants |
+
+M-Pesa fields stored directly on the `organizations` table:
+
+| Column | Description |
+|---|---|
+| `mpesa_shortcode` | Paybill or Till shortcode for the organization |
+| `mpesa_nominated_number` | Nominated number used for Pull API registration |
+| `mpesa_env` | Active environment for the organization: `sandbox` or `production` |
 
 ---
 
@@ -387,6 +405,7 @@ Enable Realtime on these tables in **Database → Replication**:
 ## M-Pesa Integration
 
 RentMS uses the **Safaricom Daraja Pull Transactions API** — a reconciliation tool that queries all C2B transactions under a Paybill or Till number within the last 48 hours.
+Each organization stores its own Daraja credentials so testers, landlords, and separate portfolios can use isolated sandbox or production apps.
 
 ### How It Works
 
@@ -401,6 +420,7 @@ RentMS uses the **Safaricom Daraja Pull Transactions API** — a reconciliation 
 ### Environments
 
 Both sandbox and production can be configured per organization. The active environment is toggled in **Settings → M-Pesa**.
+In development, keep each test organization on `sandbox` and save its own consumer key and consumer secret in organization settings.
 
 | Environment | Register URL | Query URL |
 |---|---|---|
@@ -413,6 +433,7 @@ Both sandbox and production can be configured per organization. The active envir
 - The Pull API must be **registered before querying** (one-time per shortcode)
 - Only **C2B transactions** (customer-to-business) are supported
 - Pagination is handled automatically (offset increments of 100)
+- M-Pesa credentials are scoped per organization via `organizations.settings.mpesa_consumer_key` and `organizations.settings.mpesa_consumer_secret`
 
 ---
 

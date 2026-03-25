@@ -18,7 +18,7 @@ const navItems = [
 export function MarketingLayout({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth()
   const normalizedRole = profile?.role ? (profile.role.trim().toLowerCase() as UserRole) : undefined
-  const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : "/dashboard"
+  const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : normalizedRole === "super_admin" ? "/super-admin" : "/dashboard"
   const isLoggedIn = Boolean(user)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -55,7 +55,7 @@ export function MarketingLayout({ children }: { children: ReactNode }) {
             ) : (
               <>
                 <Link to="/login"><Button variant="outline">Login</Button></Link>
-                <Link to="/register"><Button>Get Started</Button></Link>
+                <Link to="/contact"><Button>Request Access</Button></Link>
               </>
             )}
           </div>
@@ -100,8 +100,8 @@ export function MarketingLayout({ children }: { children: ReactNode }) {
                     <Link to="/login" onClick={() => setMenuOpen(false)}>
                       <Button className="w-full" variant="outline">Login</Button>
                     </Link>
-                    <Link to="/register" onClick={() => setMenuOpen(false)}>
-                      <Button className="w-full">Get Started</Button>
+                    <Link to="/contact" onClick={() => setMenuOpen(false)}>
+                      <Button className="w-full">Request Access</Button>
                     </Link>
                   </>
                 )}

@@ -167,24 +167,16 @@ export async function inviteTenant(
   organizationId: string,
   nationalId?: string,
 ): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
   const { error: functionError } = await supabase.functions.invoke("invite-tenant", {
+    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
     body: { email, name, phone, unitId, organizationId, nationalId },
   })
 
-  if (!functionError) return
-
-  const metadata = {
-    full_name: name,
-    role: "tenant",
-    phone,
-    organization_id: organizationId,
-    invited_unit_id: unitId ?? null,
-    national_id: nationalId ?? null,
-    email,
-  }
-
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { data: metadata } })
-  if (error) throw error
+  if (functionError) throw functionError
 }
 
 export async function updateTenant(id: string, data: Partial<{ full_name: string; phone: string; national_id: string; avatar_url: string | null; is_active: boolean }>) {

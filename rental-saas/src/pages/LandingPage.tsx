@@ -34,7 +34,7 @@ const sectionVariants = {
 export function LandingPage() {
   const { user, profile } = useAuth()
   const normalizedRole = profile?.role ? (profile.role.trim().toLowerCase() as UserRole) : undefined
-  const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : "/dashboard"
+  const dashboardHref = normalizedRole === "tenant" ? "/tenant" : normalizedRole === "agent" ? "/agent" : normalizedRole === "super_admin" ? "/super-admin" : "/dashboard"
   const isLoggedIn = Boolean(user)
 
   return (
@@ -60,8 +60,8 @@ export function LandingPage() {
               RentMS Kenya unifies property operations, tenant experiences, and financial controls in one system. From M-Pesa reconciliation to maintenance SLAs, everything stays connected, measurable, and auditable.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to={isLoggedIn ? dashboardHref : "/register"}>
-                <Button className="px-6">{isLoggedIn ? "Go to dashboard" : "Create your workspace"}</Button>
+              <Link to={isLoggedIn ? dashboardHref : "/login"}>
+                <Button className="px-6">{isLoggedIn ? "Go to dashboard" : "Sign in"}</Button>
               </Link>
               <Link to="/features"><Button variant="outline" className="px-6">Explore features</Button></Link>
             </div>
@@ -166,9 +166,9 @@ export function LandingPage() {
               </h2>
             </div>
             <div className="flex gap-3">
-              <Link to={isLoggedIn ? dashboardHref : "/register"}>
+              <Link to={isLoggedIn ? dashboardHref : "/login"}>
                 <Button className="bg-background text-foreground hover:bg-background/90">
-                  {isLoggedIn ? "Go to dashboard" : "Get Started"}
+                  {isLoggedIn ? "Go to dashboard" : "Sign in"}
                 </Button>
               </Link>
               <Link to="/contact"><Button variant="outline" className="border-background/60 text-foreground hover:bg-background/15">Talk to sales</Button></Link>

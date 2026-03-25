@@ -16,7 +16,7 @@ export function ConversationList({
   selectedId?: string
   unreadByConversation?: Record<string, number>
   onSelect: (conversationId: string) => void
-  onNew: () => void
+  onNew?: () => void
 }) {
   const [query, setQuery] = useState("")
 
@@ -32,7 +32,7 @@ export function ConversationList({
           <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input className="pl-8" placeholder="Search conversations" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <Button className="w-full" onClick={onNew}><MessageSquarePlus className="mr-2 h-4 w-4" />New Message</Button>
+        {onNew ? <Button className="w-full" onClick={onNew}><MessageSquarePlus className="mr-2 h-4 w-4" />New Message</Button> : null}
       </div>
 
       <div className="flex-1 overflow-auto p-2">

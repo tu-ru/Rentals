@@ -15,29 +15,36 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 export async function signUpWithEmail(
-  email: string,
-  password: string,
-  metadata: { full_name: string; role: UserRole; organization_name?: string },
+  _email: string,
+  _password: string,
+  _metadata: { full_name: string; role: UserRole; organization_name?: string },
 ): Promise<SignUpResult> {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: metadata,
-    },
-  })
-  if (error) throw error
-  if (!data.user) throw new Error("User signup failed")
-  return { user: data.user, session: data.session }
+  throw new Error("Self-service registration is disabled. Contact a super admin for an invitation.")
 }
 
-export async function signInWithMagicLink(
+export async function requestMagicLink(
   email: string,
-  metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>,
 ): Promise<void> {
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: metadata ? { data: metadata } : undefined,
+    options: { shouldCreateUser: false },
+  })
+  if (error) throw error
+}
+
+export async function inviteUser(input: {
+  email: string
+  role: Exclude<UserRole, "tenant" | "super_admin">
+  organization_id: string
+  full_name?: string
+}): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  const { error } = await supabase.functions.invoke("invite-user", {
+    body: input,
+    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
   })
   if (error) throw error
 }

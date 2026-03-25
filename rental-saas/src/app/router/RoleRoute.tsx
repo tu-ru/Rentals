@@ -8,6 +8,7 @@ import { PrivateRoute } from "./PrivateRoute"
 function fallback(role?: UserRole) {
   if (role === "tenant") return "/tenant"
   if (role === "agent") return "/agent"
+  if (role === "super_admin") return "/super-admin"
   return "/dashboard"
 }
 

@@ -26,6 +26,12 @@ export function handleSupabaseError(error: unknown): string {
   if (message.includes("user not found")) {
     return "We couldn't find an account with that email."
   }
+  if (message.includes("signups not allowed for otp") || message.includes("otp") && message.includes("signup")) {
+    return "No account exists for that email. Contact a super admin for an invitation."
+  }
+  if (message.includes("self-service registration is disabled")) {
+    return "Self-service registration is disabled. Contact a super admin for an invitation."
+  }
   if (message.includes("jwt") || maybeError.status === 401) {
     return "Your session has expired. Please sign in again."
   }

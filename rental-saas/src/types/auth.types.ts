@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "landlord" | "agent" | "tenant"
+export type UserRole = "super_admin" | "admin" | "landlord" | "agent" | "tenant"
 
 export interface UserProfile {
   id: string
@@ -22,6 +22,8 @@ export interface Organization {
   mpesa_pull_registered: boolean
   mpesa_env: "sandbox" | "production"
   subscription_plan: string
+  is_active?: boolean
+  archived_at?: string | null
   settings: Record<string, unknown>
 }
 

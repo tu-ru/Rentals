@@ -7,8 +7,8 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Label } from "../../../components/ui/label"
 import { Progress } from "../../../components/ui/progress"
-import * as authService from "../services/authService"
 import * as propertyService from "../../properties/services/propertyService"
+import * as tenantService from "../../tenants/services/tenantService"
 import { handleSupabaseError } from "../../../lib/utils/errors"
 
 const total = 5
@@ -18,12 +18,13 @@ type PropertyType = "apartment" | "house" | "commercial" | "bedsitter" | "single
 function roleHome(role?: string | null) {
   if (role === "tenant") return "/tenant"
   if (role === "agent") return "/agent"
+  if (role === "super_admin") return "/super-admin"
   return "/dashboard"
 }
 
 export function OnboardingWizard() {
   const navigate = useNavigate()
-  const { user, profile, organization, refreshProfile, sendMagicLink } = useAuth()
+  const { user, profile, organization, refreshProfile } = useAuth()
   const [step, setStep] = useState(1)
   const [direction, setDirection] = useState(1)
   const [submitting, setSubmitting] = useState(false)
@@ -37,6 +38,12 @@ export function OnboardingWizard() {
   const [mpesaShortcode, setMpesaShortcode] = useState(organization?.mpesa_shortcode ?? "")
   const [mpesaNominatedNumber, setMpesaNominatedNumber] = useState(organization?.mpesa_nominated_number ?? "")
   const [mpesaEnv, setMpesaEnv] = useState<"sandbox" | "production">(organization?.mpesa_env ?? "sandbox")
+  const [mpesaConsumerKey, setMpesaConsumerKey] = useState(
+    (((organization?.settings as Record<string, unknown> | undefined)?.mpesa_consumer_key as string) ?? ""),
+  )
+  const [mpesaConsumerSecret, setMpesaConsumerSecret] = useState(
+    (((organization?.settings as Record<string, unknown> | undefined)?.mpesa_consumer_secret as string) ?? ""),
+  )
   const [smsAutoWelcome, setSmsAutoWelcome] = useState(
     ((organization?.settings as any)?.sms_automation?.welcome ?? true) as boolean,
   )
@@ -74,17 +81,15 @@ export function OnboardingWizard() {
   }
 
   const handleTenantInvite = async () => {
-    if (!inviteEmail.trim()) return
+    const organizationId = profile?.organization_id ?? organization?.id
+    if (!inviteEmail.trim() || !organizationId) return
 
     setSubmitting(true)
     setSubmitError(null)
     setInviteStatus(null)
 
     try {
-      await sendMagicLink(inviteEmail.trim(), {
-        role: "tenant",
-        organization_id: profile?.organization_id ?? organization?.id,
-      })
+      await tenantService.inviteTenant(inviteEmail.trim(), inviteEmail.trim().split("@")[0], "", undefined, organizationId)
       setInviteStatus("Invite link sent successfully.")
       setInviteEmail("")
     } catch (error) {
@@ -101,12 +106,8 @@ export function OnboardingWizard() {
     setSubmitError(null)
 
     try {
-      let organizationId = profile.organization_id
-
-      if (!organizationId) {
-        const createdOrg = await authService.createOrganization(organizationName.trim(), user.id)
-        organizationId = createdOrg.id
-      }
+      const organizationId = profile.organization_id
+      if (!organizationId) throw new Error("Your account is not assigned to an organization. Contact a super admin.")
 
       const { error: orgUpdateError } = await supabase
         .from("organizations")
@@ -117,6 +118,9 @@ export function OnboardingWizard() {
           mpesa_env: mpesaEnv,
           settings: {
             ...((organization?.settings as Record<string, any>) ?? {}),
+            onboarding_state: "complete",
+            mpesa_consumer_key: mpesaConsumerKey.trim() || undefined,
+            mpesa_consumer_secret: mpesaConsumerSecret.trim() || undefined,
             sms_automation: {
               ...(((organization?.settings as Record<string, any>) ?? {})?.sms_automation ?? {}),
               welcome: smsAutoWelcome,
@@ -125,10 +129,6 @@ export function OnboardingWizard() {
         })
         .eq("id", organizationId)
       if (orgUpdateError) throw orgUpdateError
-
-      if (profile.organization_id !== organizationId) {
-        await authService.updateProfile(user.id, { organization_id: organizationId })
-      }
 
       if (canCreateProperty && propertyName.trim() && propertyAddress.trim() && propertyCity.trim()) {
         await propertyService.createProperty(
@@ -183,6 +183,23 @@ export function OnboardingWizard() {
           {step === 2 && (
             <>
               <h3 className="text-lg font-semibold">Configure M-Pesa</h3>
+              <div>
+                <Label>Consumer key</Label>
+                <Input
+                  placeholder="Daraja consumer key"
+                  value={mpesaConsumerKey}
+                  onChange={(e) => setMpesaConsumerKey(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Consumer secret</Label>
+                <Input
+                  type="password"
+                  placeholder="Daraja consumer secret"
+                  value={mpesaConsumerSecret}
+                  onChange={(e) => setMpesaConsumerSecret(e.target.value)}
+                />
+              </div>
               <div>
                 <Label>Shortcode</Label>
                 <Input placeholder="174379" value={mpesaShortcode} onChange={(e) => setMpesaShortcode(e.target.value)} />
@@ -271,6 +288,7 @@ export function OnboardingWizard() {
             <>
               <h3 className="text-lg font-semibold">Invite your first tenant</h3>
               <p className="text-sm text-muted-foreground">Send a magic link invite so a tenant can access their portal.</p>
+              <p className="text-xs text-muted-foreground">Tenant accounts are invite-only and stay bound to your organization.</p>
               <div>
                 <Label>Tenant email</Label>
                 <Input

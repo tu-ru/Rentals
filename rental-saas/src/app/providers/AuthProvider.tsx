@@ -14,10 +14,7 @@ interface AuthContextValue extends AuthState {
     metadata: { full_name: string; role: UserRole; organization_name?: string },
   ) => Promise<authService.SignUpResult>
   signOut: () => Promise<void>
-  sendMagicLink: (
-    email: string,
-    metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>,
-  ) => Promise<void>
+  requestMagicLink: (email: string) => Promise<void>
   refreshProfile: () => Promise<void>
   setOrganization: (organization: Organization | null) => void
 }
@@ -28,7 +25,18 @@ function roleHome(role?: UserRole | null) {
   const normalizedRole = role?.trim().toLowerCase()
   if (normalizedRole === "tenant") return "/tenant"
   if (normalizedRole === "agent") return "/agent"
+  if (normalizedRole === "super_admin") return "/super-admin"
   return "/dashboard"
+}
+
+function shouldRouteToWorkspaceOnboarding(role?: UserRole | null, organization?: Organization | null) {
+  const normalizedRole = role?.trim().toLowerCase()
+  const onboardingState = (organization?.settings as Record<string, unknown> | undefined)?.onboarding_state
+  return (normalizedRole === "landlord" || normalizedRole === "admin") && onboardingState === "provisioned"
+}
+
+function isArchivedOrganization(organization?: Organization | null) {
+  return organization?.is_active === false || Boolean(organization?.archived_at)
 }
 
 function shouldRedirectFromAuthEvent(event: AuthChangeEvent) {
@@ -36,7 +44,7 @@ function shouldRedirectFromAuthEvent(event: AuthChangeEvent) {
 }
 
 function isAuthRoute(pathname: string) {
-  return pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/onboarding")
+  return pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/onboarding") || pathname.startsWith("/invite-required") || pathname.startsWith("/organization-archived")
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOrganization(null)
       setLoading(false)
       setInitialized(true)
-      return null
+      return { profile: null, organization: null }
     }
 
     setLoading(true)
@@ -79,11 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const nextOrg = await authService.getOrganization(normalizedProfile.organization_id)
         if (!mountedRef.current || requestId !== authRequestIdRef.current) return null
         setOrganization(nextOrg)
+        return { profile: normalizedProfile, organization: nextOrg }
       } else {
         setOrganization(null)
+        return { profile: normalizedProfile, organization: null }
       }
-
-      return normalizedProfile
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       if (message.includes("Lock broken by another request")) {
@@ -94,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null)
         setOrganization(null)
       }
-      return null
+      return { profile: null, organization: null }
     } finally {
       if (requestId === authRequestIdRef.current) {
         setLoading(false)
@@ -107,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mountedRef.current) return
       const wasSignedIn = Boolean(userRef.current)
 
-      const nextProfile = await loadUserData(session?.user ?? null)
+      const nextAuthState = await loadUserData(session?.user ?? null)
       if (!mountedRef.current) return
 
       setInitialized(true)
@@ -120,9 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (!nextProfile) {
+      if (!nextAuthState?.profile) {
         return
       }
+
+      const nextProfile = nextAuthState.profile
+      const nextOrganization = nextAuthState.organization
 
       if (!shouldRedirectFromAuthEvent(event)) {
         return
@@ -133,10 +144,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (wasSignedIn) {
-        toast({ title: "Already signed in", description: "Taking you back to your dashboard." })
+        toast({ title: "Already signed in", description: "Taking you back to your workspace." })
       }
 
       if (!nextProfile.organization_id) {
+        navigate(nextProfile.role === "super_admin" ? "/super-admin" : "/invite-required", { replace: true })
+      } else if (isArchivedOrganization(nextOrganization)) {
+        navigate("/organization-archived", { replace: true })
+      } else if (shouldRouteToWorkspaceOnboarding(nextProfile.role, nextOrganization)) {
         navigate("/onboarding", { replace: true })
       } else {
         navigate(roleHome(nextProfile.role), { replace: true })
@@ -196,9 +211,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.signOut()
   }, [])
 
-  const sendMagicLink = useCallback(
-    async (email, metadata?: Partial<{ full_name: string; role: UserRole; organization_id: string }>) => {
-      await authService.signInWithMagicLink(email, metadata)
+  const requestMagicLink = useCallback(
+    async (email: string) => {
+      await authService.requestMagicLink(email)
     },
     [],
   )
@@ -223,11 +238,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut: handleSignOut,
-      sendMagicLink,
+      requestMagicLink,
       refreshProfile,
       setOrganization,
     }),
-    [user, profile, organization, loading, initialized, signIn, handleSignOut, sendMagicLink, refreshProfile],
+    [user, profile, organization, loading, initialized, signIn, handleSignOut, requestMagicLink, refreshProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
