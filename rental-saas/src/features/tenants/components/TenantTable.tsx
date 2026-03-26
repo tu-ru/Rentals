@@ -27,13 +27,13 @@ export function TenantTable({
   const columns: ColumnDef<TenantRow>[] = [
     {
       accessorKey: "full_name",
-      header: "Avatar + Name",
+      header: "Name",
       cell: ({ row }) => {
         const tenant = row.original
         return (
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={tenant.avatar_url ?? undefined} alt={tenant.full_name ?? "Tenant"} />
+              {/* <AvatarImage src={tenant.avatar_url ?? undefined} alt={tenant.full_name ?? "Tenant"} /> */}
               <AvatarFallback>{tenant.full_name?.[0] ?? "T"}</AvatarFallback>
             </Avatar>
             <div>

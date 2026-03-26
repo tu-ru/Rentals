@@ -41,10 +41,10 @@ export function useRecordManualPayment() {
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: async (data: RecordManualPaymentInput) => {
-      await paymentService.recordManualPayment(data)
-      if (data.send_sms) {
-        const invoice = await paymentService.getInvoiceForPaymentNotice(data.invoice_id)
+    mutationFn: (data: RecordManualPaymentInput) => paymentService.recordManualPayment(data),
+    onSuccess: async (result, variables) => {
+      if (variables.send_sms) {
+        const invoice = await paymentService.getInvoiceForPaymentNotice(variables.invoice_id)
         if (invoice?.tenant_id && profile?.organization_id) {
           const prefs = (organization?.settings as any)?.notification_preferences ?? {}
           const smsPrefs = (organization?.settings as any)?.sms_automation ?? {}
@@ -54,12 +54,14 @@ export function useRecordManualPayment() {
               recipient_id: invoice.tenant_id,
               type: "payment_confirmed",
               title: "Payment received",
-              body: `We received your payment of KES ${Number(data.amount).toLocaleString("en-KE")}.`,
+              body: `We received your payment of KES ${Number(variables.amount).toLocaleString("en-KE")}.`,
               metadata: {
-                invoice_id: data.invoice_id,
-                amount: data.amount,
+                invoice_id: variables.invoice_id,
+                amount: variables.amount,
                 source: "manual_payment_sms",
                 target: "/tenant/payments",
+                allocated_amount: result.allocated_amount,
+                credit_amount: result.credit_amount,
               },
             })
           }
@@ -69,8 +71,8 @@ export function useRecordManualPayment() {
                 tenant_id: invoice.tenant_id,
                 message_type: "payment_confirmed",
                 template_variables: {
-                  amount: `KES ${Number(data.amount).toLocaleString("en-KE")}`,
-                  transaction_id: data.mpesa_transaction_id ?? "Manual",
+                  amount: `KES ${Number(variables.amount).toLocaleString("en-KE")}`,
+                  transaction_id: variables.mpesa_transaction_id ?? "Manual",
                   balance: `KES ${Number(invoice.balance ?? 0).toLocaleString("en-KE")}`,
                   invoice_number: invoice.invoice_number ?? "",
                 },
@@ -81,16 +83,17 @@ export function useRecordManualPayment() {
           }
         }
       }
-    },
-    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PAYMENTS] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
       toast({
         title: "Payment recorded",
-        description: variables.send_sms
-          ? "Payment saved and confirmation SMS queued."
-          : "Payment saved successfully.",
+        description:
+          result.credit_amount > 0
+            ? `Allocated KES ${result.allocated_amount.toLocaleString("en-KE")} and created KES ${result.credit_amount.toLocaleString("en-KE")} tenant credit.`
+            : variables.send_sms
+              ? "Payment saved and confirmation SMS queued."
+              : "Payment saved successfully.",
       })
     },
     onError: (error) => {

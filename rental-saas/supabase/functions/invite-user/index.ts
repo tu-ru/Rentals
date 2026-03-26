@@ -62,12 +62,12 @@ Deno.serve(async (req) => {
 
   const { data: callerProfile, error: profileError } = await admin
     .from("profiles")
-    .select("id, role")
+    .select("id, role, organization_id")
     .eq("id", caller.id)
     .single()
 
-  if (profileError || callerProfile?.role !== "super_admin") {
-    return new Response(JSON.stringify({ error: "Only super admins can invite landlords, admins, or agents." }), { status: 403, headers: corsHeaders })
+  if (profileError || !callerProfile) {
+    return new Response(JSON.stringify({ error: "Caller profile not found." }), { status: 403, headers: corsHeaders })
   }
 
   const body = (await req.json()) as InviteUserInput
@@ -79,6 +79,23 @@ Deno.serve(async (req) => {
 
   if (!["landlord", "admin", "agent"].includes(body.role)) {
     return new Response(JSON.stringify({ error: "Only landlord, admin, or agent roles are supported here." }), { status: 400, headers: corsHeaders })
+  }
+
+  const isSuperAdmin = callerProfile.role === "super_admin"
+  const isOrgLandlord = callerProfile.role === "landlord" && callerProfile.organization_id === body.organization_id
+  const isOrgAdmin = callerProfile.role === "admin" && callerProfile.organization_id === body.organization_id
+
+  const canInvite =
+    isSuperAdmin ||
+    (isOrgLandlord && (body.role === "admin" || body.role === "agent")) ||
+    (isOrgAdmin && body.role === "agent")
+
+  if (!canInvite) {
+    return new Response(JSON.stringify({ error: "You do not have permission to invite that role." }), { status: 403, headers: corsHeaders })
+  }
+
+  if (!isSuperAdmin && body.role === "landlord") {
+    return new Response(JSON.stringify({ error: "Only super admins can create landlord accounts." }), { status: 403, headers: corsHeaders })
   }
 
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {

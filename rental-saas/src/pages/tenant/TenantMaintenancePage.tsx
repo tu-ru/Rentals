@@ -1,16 +1,24 @@
 import { useMemo, useState } from "react"
+import { Wrench } from "lucide-react"
+import { useAuth } from "../../app/providers"
 import { TenantLayout } from "../../components/layouts"
 import { EmptyState, PageHeader } from "../../components/shared"
 import { Button } from "../../components/ui/button"
 import { MaintenanceCard, MaintenanceForm } from "../../features/maintenance/components"
 import { useTenantMaintenanceRequests } from "../../features/maintenance/hooks"
-import { Wrench } from "lucide-react"
+import { useTenant } from "../../features/tenants/hooks"
 
 export function TenantMaintenancePage() {
+  const { profile } = useAuth()
   const { data: requests = [] } = useTenantMaintenanceRequests()
+  const { data: tenant } = useTenant(profile?.id)
   const [openForm, setOpenForm] = useState(false)
 
-  const defaultUnitId = useMemo(() => requests[0]?.unit_id ?? "00000000-0000-0000-0000-000000000000", [requests])
+  const activeLease = useMemo(
+    () => tenant?.leases.find((lease) => lease.status === "active") ?? tenant?.leases[0] ?? null,
+    [tenant?.leases],
+  )
+  const activeUnitId = activeLease?.unit_id ?? ""
 
   return (
     <TenantLayout title="Maintenance Requests">
@@ -18,10 +26,20 @@ export function TenantMaintenancePage() {
         <PageHeader
           title="Maintenance Requests"
           subtitle="Submit and track your maintenance issues"
-          actions={<Button onClick={() => setOpenForm(true)}>Submit Request</Button>}
+          actions={
+            <Button onClick={() => setOpenForm(true)} disabled={!activeUnitId}>
+              Submit Request
+            </Button>
+          }
         />
 
-        {requests.length === 0 ? (
+        {!activeUnitId ? (
+          <EmptyState
+            icon={Wrench}
+            title="No active unit found"
+            description="You need an active lease before you can submit a maintenance request."
+          />
+        ) : requests.length === 0 ? (
           <EmptyState
             icon={Wrench}
             title="No requests yet"
@@ -41,7 +59,7 @@ export function TenantMaintenancePage() {
           </div>
         )}
 
-        <MaintenanceForm open={openForm} onOpenChange={setOpenForm} unitId={defaultUnitId} />
+        <MaintenanceForm open={openForm} onOpenChange={setOpenForm} unitId={activeUnitId} />
       </div>
     </TenantLayout>
   )

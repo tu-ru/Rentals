@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useAuth } from "../../../app/providers"
 import { Button } from "../../../components/ui/button"
@@ -28,6 +28,10 @@ export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean;
       priority: "medium",
     },
   })
+
+  useEffect(() => {
+    form.setValue("unit_id", unitId)
+  }, [form, unitId])
 
   const previews = useMemo(() => images.map((file) => URL.createObjectURL(file)), [images])
 
@@ -107,7 +111,7 @@ export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean;
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button disabled={createMutation.isPending}>{createMutation.isPending ? "Submitting..." : "Submit Request"}</Button>
+            <Button disabled={createMutation.isPending || !unitId}>{createMutation.isPending ? "Submitting..." : "Submit Request"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

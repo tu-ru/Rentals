@@ -14,8 +14,24 @@ function useTabsContext() {
   return context
 }
 
-export function Tabs({ defaultValue, children }: { defaultValue: string; children: ReactNode }) {
-  const [value, setValue] = useState(defaultValue)
+export function Tabs({
+  defaultValue,
+  value: controlledValue,
+  onValueChange,
+  children,
+}: {
+  defaultValue?: string
+  value?: string
+  onValueChange?: (value: string) => void
+  children: ReactNode
+}) {
+  const [internalValue, setInternalValue] = useState(defaultValue ?? "")
+  const value = controlledValue ?? internalValue
+  const setValue = (next: string) => {
+    onValueChange?.(next)
+    if (controlledValue === undefined) setInternalValue(next)
+  }
+
   return <TabsContext.Provider value={{ value, setValue }}>{children}</TabsContext.Provider>
 }
 
@@ -26,6 +42,7 @@ export function TabsList({ className, children }: { className?: string; children
 export function TabsTrigger({ value, className, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { value: string }) {
   const tabs = useTabsContext()
   const active = tabs.value === value
+  const { onClick, ...rest } = props
 
   return (
     <button
@@ -35,8 +52,11 @@ export function TabsTrigger({ value, className, children, ...props }: ButtonHTML
         active ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
         className,
       )}
-      onClick={() => tabs.setValue(value)}
-      {...props}
+      onClick={(event) => {
+        tabs.setValue(value)
+        onClick?.(event)
+      }}
+      {...rest}
     >
       {children}
     </button>

@@ -32,6 +32,38 @@ function extractProfileEmail(profileRow: { metadata?: Record<string, unknown> | 
   return typeof email === "string" && email.trim().length > 0 ? email : null
 }
 
+function assertRenewDate(newEndDate: string) {
+  const parsed = new Date(`${newEndDate}T23:59:59`)
+  if (Number.isNaN(parsed.getTime())) throw new Error("Enter a valid lease end date.")
+  if (parsed.getTime() < Date.now()) throw new Error("Renewal end date must be today or later.")
+}
+
+function mapLeaseRecord(lease: any): LeaseRecord {
+  const unitData = Array.isArray(lease.unit) ? lease.unit[0] : lease.unit
+  const propertyData = Array.isArray(unitData?.property) ? unitData?.property[0] : unitData?.property
+  const tenantData = Array.isArray(lease.tenant) ? lease.tenant[0] : lease.tenant
+
+  return {
+    id: lease.id,
+    unit_id: lease.unit_id,
+    tenant_id: lease.tenant_id,
+    start_date: lease.start_date,
+    end_date: lease.end_date,
+    monthly_rent: Number(lease.monthly_rent),
+    deposit_paid: Number(lease.deposit_paid),
+    status: lease.status,
+    terms: lease.terms,
+    termination_reason: lease.termination_reason,
+    terminated_at: lease.terminated_at,
+    unit_number: unitData?.unit_number ?? null,
+    property_name: propertyData?.name ?? null,
+    tenant_name: tenantData?.full_name ?? null,
+    tenant_phone: tenantData?.phone ?? null,
+    tenant_national_id: tenantData?.national_id ?? null,
+    tenant_email: tenantData ? extractProfileEmail(tenantData) : null,
+  }
+}
+
 export async function getTenants(organizationId: string): Promise<TenantRow[]> {
   const { data: tenants, error } = await supabase
     .from("profiles")
@@ -43,7 +75,7 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
 
   const tenantIds = (tenants ?? []).map((tenant) => tenant.id)
 
-  const [{ data: activeLeases }, { data: invoiceBalances }] = await Promise.all([
+  const [{ data: activeLeases }, { data: invoiceBalances }, { data: tenantCredits }] = await Promise.all([
     tenantIds.length
       ? supabase
           .from("leases")
@@ -58,6 +90,13 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
           .in("tenant_id", tenantIds)
           .in("status", ["sent", "overdue", "draft"])
       : Promise.resolve({ data: [] as any[] }),
+    tenantIds.length
+      ? supabase
+          .from("tenant_credits")
+          .select("tenant_id, amount_remaining")
+          .in("tenant_id", tenantIds)
+          .gt("amount_remaining", 0)
+      : Promise.resolve({ data: [] as any[] }),
   ])
 
   const activeByTenant = new Map<string, any>()
@@ -68,6 +107,11 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
   const balanceByTenant = new Map<string, number>()
   for (const row of invoiceBalances ?? []) {
     balanceByTenant.set(row.tenant_id, (balanceByTenant.get(row.tenant_id) ?? 0) + Number(row.balance ?? 0))
+  }
+
+  const creditByTenant = new Map<string, number>()
+  for (const row of tenantCredits ?? []) {
+    creditByTenant.set(row.tenant_id, (creditByTenant.get(row.tenant_id) ?? 0) + Number(row.amount_remaining ?? 0))
   }
 
   return (tenants ?? []).map((tenant) => {
@@ -85,6 +129,7 @@ export async function getTenants(organizationId: string): Promise<TenantRow[]> {
           }
         : null,
       outstanding_balance: balanceByTenant.get(tenant.id) ?? 0,
+      available_credit: creditByTenant.get(tenant.id) ?? 0,
     } as TenantRow
   })
 }
@@ -100,7 +145,7 @@ export async function getTenant(id: string): Promise<TenantDetails> {
     .single()
   if (error) throw error
 
-  const [activeLease, leasesRes, paymentsRes, maintenanceRes, invoicesRes] = await Promise.all([
+  const [activeLease, leasesRes, paymentsRes, maintenanceRes, invoicesRes, creditsRes] = await Promise.all([
     getActiveLease(id),
     supabase
       .from("leases")
@@ -122,9 +167,15 @@ export async function getTenant(id: string): Promise<TenantDetails> {
       .select("balance")
       .eq("tenant_id", id)
       .in("status", ["sent", "overdue", "draft"]),
+    supabase
+      .from("tenant_credits")
+      .select("amount_remaining")
+      .eq("tenant_id", id)
+      .gt("amount_remaining", 0),
   ])
 
   const outstanding = (invoicesRes.data ?? []).reduce((sum, row) => sum + Number(row.balance ?? 0), 0)
+  const availableCredit = (creditsRes.data ?? []).reduce((sum, row) => sum + Number(row.amount_remaining ?? 0), 0)
 
   return {
     ...(tenant as any),
@@ -139,21 +190,8 @@ export async function getTenant(id: string): Promise<TenantDetails> {
         }
       : null,
     outstanding_balance: outstanding,
-    leases: (leasesRes.data ?? []).map((lease: any) => ({
-      id: lease.id,
-      unit_id: lease.unit_id,
-      tenant_id: lease.tenant_id,
-      start_date: lease.start_date,
-      end_date: lease.end_date,
-      monthly_rent: Number(lease.monthly_rent),
-      deposit_paid: Number(lease.deposit_paid),
-      status: lease.status,
-      terms: lease.terms,
-      termination_reason: lease.termination_reason,
-      terminated_at: lease.terminated_at,
-      unit_number: lease.unit?.unit_number ?? null,
-      property_name: lease.unit?.property?.name ?? null,
-    })),
+    available_credit: availableCredit,
+    leases: (leasesRes.data ?? []).map((lease: any) => mapLeaseRecord(lease)),
     payments: (paymentsRes.data ?? []).map((payment) => ({ ...payment, amount: Number(payment.amount) })),
     maintenanceRequests: maintenanceRes.data ?? [],
   } as TenantDetails
@@ -195,24 +233,7 @@ export async function getActiveLease(tenantId: string): Promise<LeaseRecord | nu
   if (error) throw error
   if (!data) return null
 
-  const unitData = Array.isArray((data as any).unit) ? (data as any).unit[0] : (data as any).unit
-  const propertyData = Array.isArray(unitData?.property) ? unitData?.property[0] : unitData?.property
-
-  return {
-    id: data.id,
-    unit_id: data.unit_id,
-    tenant_id: data.tenant_id,
-    start_date: data.start_date,
-    end_date: data.end_date,
-    monthly_rent: Number(data.monthly_rent),
-    deposit_paid: Number(data.deposit_paid),
-    status: data.status,
-    terms: data.terms,
-    termination_reason: data.termination_reason,
-    terminated_at: data.terminated_at,
-    unit_number: unitData?.unit_number ?? null,
-    property_name: propertyData?.name ?? null,
-  }
+  return mapLeaseRecord(data)
 }
 
 export async function createLease(data: LeaseFormInput): Promise<void> {
@@ -243,7 +264,7 @@ export async function createLease(data: LeaseFormInput): Promise<void> {
       period_start: periodStart.toISOString().slice(0, 10),
       period_end: periodEnd.toISOString().slice(0, 10),
       status: "sent",
-      line_items: [{ type: "rent", amount: created.monthly_rent }],
+      line_items: [{ type: "rent", description: "Rent", amount: created.monthly_rent }],
     })
     if (invoiceError) throw invoiceError
 
@@ -253,13 +274,21 @@ export async function createLease(data: LeaseFormInput): Promise<void> {
 }
 
 export async function updateLease(id: string, data: Partial<LeaseFormInput>) {
-  const { error } = await supabase.from("leases").update(data).eq("id", id)
+  const { data: existing, error: readError } = await supabase.from("leases").select("status").eq("id", id).single()
+  if (readError) throw readError
+  if (existing.status === "terminated") throw new Error("Terminated leases cannot be edited.")
+
+  const payload = { ...data }
+  delete (payload as Partial<LeaseFormInput>).status
+
+  const { error } = await supabase.from("leases").update(payload).eq("id", id)
   if (error) throw error
 }
 
 export async function terminateLease(id: string, reason: string) {
-  const { data: lease, error } = await supabase.from("leases").select("unit_id").eq("id", id).single()
+  const { data: lease, error } = await supabase.from("leases").select("unit_id, status").eq("id", id).single()
   if (error) throw error
+  if (lease.status === "terminated") throw new Error("This lease is already terminated.")
 
   const { error: terminateError } = await supabase
     .from("leases")
@@ -272,6 +301,11 @@ export async function terminateLease(id: string, reason: string) {
 }
 
 export async function renewLease(id: string, newEndDate: string, newRent: number) {
+  assertRenewDate(newEndDate)
+  const { data: existing, error: readError } = await supabase.from("leases").select("status").eq("id", id).single()
+  if (readError) throw readError
+  if (existing.status === "terminated") throw new Error("Terminated leases cannot be renewed.")
+
   const { error } = await supabase.from("leases").update({ end_date: newEndDate, monthly_rent: newRent, status: "active" }).eq("id", id)
   if (error) throw error
 }
@@ -290,9 +324,21 @@ export async function getVacantUnits(organizationId: string) {
 export async function getLeases(organizationId: string) {
   const { data, error } = await supabase
     .from("leases")
-    .select("id, start_date, end_date, monthly_rent, deposit_paid, status, tenant:profiles(full_name), unit:units(unit_number, property:properties(name))")
+    .select("id, unit_id, tenant_id, start_date, end_date, monthly_rent, deposit_paid, status, terms, termination_reason, terminated_at, tenant:profiles(full_name, phone, national_id, metadata), unit:units(unit_number, property:properties(name))")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((lease: any) => mapLeaseRecord(lease))
+}
+
+export async function getLease(id: string): Promise<LeaseRecord> {
+  const { organizationId } = await getProfileContext()
+  const { data, error } = await supabase
+    .from("leases")
+    .select("id, unit_id, tenant_id, start_date, end_date, monthly_rent, deposit_paid, status, terms, termination_reason, terminated_at, tenant:profiles(full_name, phone, national_id, metadata), unit:units(unit_number, property:properties(name))")
+    .eq("organization_id", organizationId)
+    .eq("id", id)
+    .single()
+  if (error) throw error
+  return mapLeaseRecord(data)
 }

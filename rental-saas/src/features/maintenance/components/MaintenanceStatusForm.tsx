@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "../../../components/ui/label"
 import { Select } from "../../../components/ui/select"
 import { useAuth } from "../../../app/providers"
-import { useAssignMaintenanceRequest, useAssignableStaff, useUpdateMaintenanceStatus } from "../hooks"
+import { useAssignableStaff, useUpdateMaintenanceWorkflow } from "../hooks"
 import type { MaintenanceRequest } from "../types"
 
 export function MaintenanceStatusForm({
@@ -22,8 +22,7 @@ export function MaintenanceStatusForm({
   const [status, setStatus] = useState<MaintenanceRequest["status"]>(request?.status ?? "open")
   const [assignedTo, setAssignedTo] = useState(request?.assigned_to ?? "")
   const [resolutionNotes, setResolutionNotes] = useState("")
-  const assignMutation = useAssignMaintenanceRequest()
-  const statusMutation = useUpdateMaintenanceStatus()
+  const workflowMutation = useUpdateMaintenanceWorkflow()
   const { data: staff = [] } = useAssignableStaff()
 
   useEffect(() => {
@@ -37,25 +36,18 @@ export function MaintenanceStatusForm({
 
   const submit = async () => {
     const nextAssignedTo = profile?.role === "agent" ? (assignedTo || profile.id || "") : assignedTo
-
-    if (nextAssignedTo) {
-      await assignMutation.mutateAsync({
-        id: request.id,
-        assignedToId: nextAssignedTo,
-        tenantId: request.tenant_id,
-        organizationId: profile?.organization_id,
-        title: request.title,
-      })
-    }
-
-    await statusMutation.mutateAsync({
+    await workflowMutation.mutateAsync({
       id: request.id,
+      assignedToId: nextAssignedTo || null,
       status,
       resolutionNotes,
       tenantId: request.tenant_id,
       organizationId: profile?.organization_id,
       title: request.title,
+      previousStatus: request.status,
+      previousAssignedTo: request.assigned_to ?? null,
     })
+
     onOpenChange(false)
   }
 
@@ -117,7 +109,15 @@ export function MaintenanceStatusForm({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={status === "resolved" && !resolutionNotes.trim()}>Save</Button>
+          <Button
+            onClick={submit}
+            disabled={
+              (status === "resolved" && !resolutionNotes.trim()) ||
+              workflowMutation.isPending
+            }
+          >
+            {workflowMutation.isPending ? "Saving..." : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

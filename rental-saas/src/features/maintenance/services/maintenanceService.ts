@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client"
 import type {
   CreateMaintenanceInput,
+  MaintenanceWorkflowInput,
   MaintenanceRequest,
   MaintenanceStats,
   MaintenanceWithRelations,
@@ -112,16 +113,7 @@ export async function updateRequest(id: string, data: UpdateMaintenanceInput): P
 }
 
 export async function assignRequest(id: string, assignedToId: string): Promise<MaintenanceRequest> {
-  const organizationId = await getMyOrgId()
-  const { data, error } = await supabase
-    .from("maintenance_requests")
-    .update({ assigned_to: assignedToId, status: "assigned" })
-    .eq("organization_id", organizationId)
-    .eq("id", id)
-    .select("*")
-    .single()
-  if (error) throw error
-  return data as MaintenanceRequest
+  return updateWorkflow(id, { assignedToId })
 }
 
 export async function updateStatus(
@@ -129,25 +121,19 @@ export async function updateStatus(
   status: MaintenanceRequest["status"],
   resolutionNotes?: string,
 ): Promise<MaintenanceRequest> {
-  const organizationId = await getMyOrgId()
-  const payload: Record<string, unknown> = { status }
-  if (status === "resolved") {
-    if (!resolutionNotes || !resolutionNotes.trim()) {
-      throw new Error("Resolution notes are required when resolving a request.")
-    }
-    payload.resolved_at = new Date().toISOString()
-    payload.resolution_notes = resolutionNotes
-  }
+  return updateWorkflow(id, { status, resolutionNotes })
+}
 
-  const { data, error } = await supabase
-    .from("maintenance_requests")
-    .update(payload)
-    .eq("organization_id", organizationId)
-    .eq("id", id)
-    .select("*")
-    .single()
+export async function updateWorkflow(id: string, data: MaintenanceWorkflowInput): Promise<MaintenanceRequest> {
+  const { data: updated, error } = await supabase.rpc("update_maintenance_workflow", {
+    p_request_id: id,
+    p_assigned_to: data.assignedToId ?? null,
+    p_assignment_provided: typeof data.assignedToId !== "undefined",
+    p_status: data.status ?? null,
+    p_resolution_notes: data.resolutionNotes?.trim() || null,
+  })
   if (error) throw error
-  return data as MaintenanceRequest
+  return updated as MaintenanceRequest
 }
 
 export async function getTenantRequests(tenantId: string): Promise<MaintenanceRequest[]> {

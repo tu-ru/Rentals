@@ -16,6 +16,14 @@ export function usePresence(conversationId?: string, profileId?: string) {
         const state = channel.presenceState<Record<string, any>[]>()
         setOnlineUsers(Object.keys(state))
       })
+      .on("presence", { event: "join" }, () => {
+        const state = channel.presenceState<Record<string, any>[]>()
+        setOnlineUsers(Object.keys(state))
+      })
+      .on("presence", { event: "leave" }, () => {
+        const state = channel.presenceState<Record<string, any>[]>()
+        setOnlineUsers(Object.keys(state))
+      })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await channel.track({ user_id: profileId, online_at: new Date().toISOString() })

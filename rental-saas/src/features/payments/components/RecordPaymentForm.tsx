@@ -28,7 +28,9 @@ export function RecordPaymentForm({ open, onOpenChange }: { open: boolean; onOpe
 
   const selectedInvoiceId = form.watch("invoice_id")
   const method = form.watch("payment_method")
+  const enteredAmount = Number(form.watch("amount") ?? 0)
   const selectedInvoice = invoices.find((invoice) => invoice.id === selectedInvoiceId)
+  const overpaymentAmount = selectedInvoice ? Math.max(enteredAmount - Number(selectedInvoice.balance ?? 0), 0) : 0
 
   useEffect(() => {
     if (selectedInvoice && Number(form.getValues("amount")) <= 0) {
@@ -66,6 +68,16 @@ export function RecordPaymentForm({ open, onOpenChange }: { open: boolean; onOpe
           <div>
             <Label>Amount</Label>
             <Input type="number" step="0.01" min={1} {...form.register("amount", { valueAsNumber: true })} />
+            {selectedInvoice && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Open balance: {formatKES(Number(selectedInvoice.balance ?? 0))} ({selectedInvoice.status})
+              </p>
+            )}
+            {selectedInvoice && overpaymentAmount > 0 && (
+              <p className="mt-1 text-xs text-emerald-700">
+                Excess payment of {formatKES(overpaymentAmount)} will be stored as tenant credit.
+              </p>
+            )}
           </div>
 
           <div>

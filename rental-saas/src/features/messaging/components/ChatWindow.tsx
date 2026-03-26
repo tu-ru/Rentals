@@ -20,6 +20,10 @@ export function ChatWindow({ conversationId }: { conversationId?: string }) {
   const { onlineUsers } = usePresence(conversationId, profile?.id)
   const [draft, setDraft] = useState("")
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const onlineOthers = useMemo(
+    () => onlineUsers.filter((userId) => userId !== profile?.id),
+    [onlineUsers, profile?.id],
+  )
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -46,7 +50,9 @@ export function ChatWindow({ conversationId }: { conversationId?: string }) {
       <div className="border-b p-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">{conversation?.title ?? "Conversation"}</h3>
-          <span className="text-xs text-muted-foreground">{onlineUsers.length} online</span>
+          <span className="text-xs text-muted-foreground">
+            {onlineOthers.length > 0 ? `${onlineOthers.length} online` : "No one else online"}
+          </span>
         </div>
       </div>
 

@@ -58,8 +58,7 @@ export function MaintenanceKanban({
                     <MaintenanceCard
                       request={request}
                       role={role}
-                      onAssign={() => onOpenStatus(request)}
-                      onUpdateStatus={() => onOpenStatus(request)}
+                      onUpdate={() => onOpenStatus(request)}
                     />
                   </DraggableCard>
                 ))}

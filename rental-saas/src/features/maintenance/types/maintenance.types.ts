@@ -55,6 +55,11 @@ export type MaintenanceCategory = typeof maintenanceCategoryValues[number]
 export type MaintenanceRequest = z.infer<typeof maintenanceRequestSchema>
 export type CreateMaintenanceInput = z.infer<typeof createMaintenanceSchema>
 export type UpdateMaintenanceInput = z.infer<typeof updateMaintenanceSchema>
+export interface MaintenanceWorkflowInput {
+  assignedToId?: string | null
+  status?: MaintenanceRequest["status"]
+  resolutionNotes?: string
+}
 
 export interface MaintenanceWithRelations extends MaintenanceRequest {
   unit: { id: string; unit_number: string; property_id: string } | null

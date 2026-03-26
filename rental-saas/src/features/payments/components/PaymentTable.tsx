@@ -20,6 +20,12 @@ export function PaymentTable({ payments, loading }: { payments: PaymentItem[]; l
     { accessorKey: "tenant_name", header: "Tenant", cell: ({ row }) => row.original.tenant_name ?? "-" },
     { accessorKey: "invoice_number", header: "Invoice #", cell: ({ row }) => row.original.invoice_number ?? "-" },
     { accessorKey: "amount", header: "Amount", cell: ({ row }) => formatKES(row.original.amount) },
+    { accessorKey: "allocated_amount", header: "Allocated", cell: ({ row }) => formatKES(row.original.allocated_amount) },
+    {
+      accessorKey: "unapplied_credit_amount",
+      header: "Credit Created",
+      cell: ({ row }) => row.original.unapplied_credit_amount > 0 ? formatKES(row.original.unapplied_credit_amount) : "-",
+    },
     {
       accessorKey: "payment_method",
       header: "Method",

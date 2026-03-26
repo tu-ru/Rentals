@@ -1,5 +1,6 @@
 import { Building2, ClipboardList, LayoutDashboard, ShieldCheck, Users } from "lucide-react"
-import { NavLink, Outlet } from "react-router-dom"
+import { useEffect } from "react"
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { TopNav } from "./TopNav"
 
 const navItems = [
@@ -11,6 +12,37 @@ const navItems = [
 ]
 
 export function SuperAdminShell() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!location.hash) return
+
+    const sectionId = location.hash.replace("#", "")
+    const element = document.getElementById(sectionId)
+    if (!element) return
+
+    window.requestAnimationFrame(() => {
+      element.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [location.hash])
+
+  const scrollToHash = (hash: string) => {
+    const sectionId = hash.replace("#", "")
+    const element = document.getElementById(sectionId)
+    if (!element) return
+    element.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
+  const handleNavigate = (hash: string) => {
+    if (location.hash === hash) {
+      scrollToHash(hash)
+      return
+    }
+
+    navigate(`/super-admin${hash}`)
+  }
+
   return (
     <div className="flex h-screen bg-background">
       <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-card/95 backdrop-blur">
@@ -29,15 +61,21 @@ export function SuperAdminShell() {
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navItems.map((item) => {
             const Icon = item.icon
+            const isActive = location.hash === item.href.replace("/super-admin", "")
             return (
-              <NavLink
+              <button
+                type="button"
                 key={item.href}
-                to={item.href}
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                onClick={() => handleNavigate(item.href.replace("/super-admin", ""))}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
               >
                 <Icon className="h-4 w-4" />
                 <span>{item.label}</span>
-              </NavLink>
+              </button>
             )
           })}
         </nav>

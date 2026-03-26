@@ -24,6 +24,8 @@ export interface PaymentItem {
   invoice_number: string | null
   invoice_id: string | null
   amount: number
+  allocated_amount: number
+  unapplied_credit_amount: number
   payment_method: PaymentMethod
   status: PaymentStatus
   mpesa_transaction_id: string | null
@@ -51,7 +53,18 @@ export interface OpenInvoiceOption {
   invoice_number: string
   tenant_id: string
   balance: number
+  status: "draft" | "sent" | "overdue"
   tenant: { full_name: string | null } | null
+}
+
+export interface RecordManualPaymentResult {
+  payment_id: string
+  invoice_id: string
+  tenant_id: string
+  allocated_amount: number
+  credit_amount: number
+  invoice_balance: number
+  invoice_status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
 }
 
 export interface MpesaSyncResult {

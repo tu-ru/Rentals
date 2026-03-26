@@ -3,7 +3,9 @@ import type { Organization } from "../../../types/auth.types"
 import type {
   AgentPropertyAssignment,
   InvitationRecord,
-  OrganizationSettingsInput,
+  OperationalSettingsInput,
+  OwnerSettingsInput,
+  OwnershipTransferInput,
   PlatformOrganizationSummary,
   PlatformUserSummary,
   ProvisionOrganizationInput,
@@ -39,7 +41,32 @@ export async function getOrganizationSettings(organizationId: string): Promise<O
   return data as Organization | null
 }
 
-export async function updateOrganizationSettings(organizationId: string, payload: OrganizationSettingsInput): Promise<Organization> {
+export async function updateOperationalSettings(organizationId: string, payload: OperationalSettingsInput): Promise<Organization> {
+  const { data: current, error: currentError } = await supabase.from("organizations").select("settings").eq("id", organizationId).single()
+  if (currentError) throw currentError
+
+  const existingSettings = (current.settings ?? {}) as Record<string, unknown>
+  const { data, error } = await supabase
+    .from("organizations")
+    .update({
+      settings: {
+        ...existingSettings,
+        ...payload.settings,
+      },
+    })
+    .eq("id", organizationId)
+    .select("*")
+    .single()
+
+  if (error) throw error
+  return data as Organization
+}
+
+export async function updateOwnerSettings(organizationId: string, payload: OwnerSettingsInput): Promise<Organization> {
+  const { data: current, error: currentError } = await supabase.from("organizations").select("settings").eq("id", organizationId).single()
+  if (currentError) throw currentError
+
+  const existingSettings = (current.settings ?? {}) as Record<string, unknown>
   const { data, error } = await supabase
     .from("organizations")
     .update({
@@ -47,7 +74,13 @@ export async function updateOrganizationSettings(organizationId: string, payload
       slug: payload.slug,
       logo_url: payload.logo_url,
       subscription_plan: payload.subscription_plan,
-      settings: payload.settings,
+      mpesa_shortcode: payload.mpesa_shortcode,
+      mpesa_nominated_number: payload.mpesa_nominated_number,
+      mpesa_env: payload.mpesa_env,
+      settings: {
+        ...existingSettings,
+        ...payload.settings,
+      },
     })
     .eq("id", organizationId)
     .select("*")
@@ -101,6 +134,11 @@ export async function listAgentPropertyAssignments(organizationId: string): Prom
 
 export async function updateTeamMemberStatus(memberId: string, isActive: boolean): Promise<void> {
   const { error } = await supabase.from("profiles").update({ is_active: isActive }).eq("id", memberId)
+  if (error) throw error
+}
+
+export async function updateTeamMemberRole(memberId: string, role: "admin" | "agent"): Promise<void> {
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", memberId)
   if (error) throw error
 }
 
@@ -223,6 +261,33 @@ export async function deleteUserAsSuperAdmin(input: { user_id: string }): Promis
   const { error } = await supabase.functions.invoke("super-admin-actions", {
     headers,
     body: { action: "delete_user", ...input },
+  })
+  if (error) throw error
+}
+
+export async function transferOwnership(input: OwnershipTransferInput): Promise<void> {
+  const headers = await getAuthHeaders()
+  const { error } = await supabase.functions.invoke("organization-owner-actions", {
+    headers,
+    body: { action: "transfer_ownership", ...input },
+  })
+  if (error) throw error
+}
+
+export async function archiveOrganizationAsOwner(input: { confirm_name: string }): Promise<void> {
+  const headers = await getAuthHeaders()
+  const { error } = await supabase.functions.invoke("organization-owner-actions", {
+    headers,
+    body: { action: "archive_organization", ...input },
+  })
+  if (error) throw error
+}
+
+export async function deleteOrganizationAsOwner(input: { confirm_name: string }): Promise<void> {
+  const headers = await getAuthHeaders()
+  const { error } = await supabase.functions.invoke("organization-owner-actions", {
+    headers,
+    body: { action: "delete_organization", ...input },
   })
   if (error) throw error
 }

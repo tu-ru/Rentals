@@ -13,13 +13,11 @@ export function InvoiceTable({
   loading,
   onView,
   onMarkSent,
-  onUpdateStatus,
 }: {
   invoices: InvoiceListItem[]
   loading?: boolean
   onView: (invoice: InvoiceListItem) => void
   onMarkSent: (id: string) => void
-  onUpdateStatus: (id: string, status: InvoiceListItem["status"]) => void
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | InvoiceListItem["status"]>("all")
   const [smsInvoice, setSmsInvoice] = useState<InvoiceListItem | null>(null)
@@ -64,17 +62,6 @@ export function InvoiceTable({
           {new Date(row.original.due_date) < new Date() && !["paid", "cancelled"].includes(row.original.status) && (
             <Button size="sm" variant="outline" onClick={() => setSmsInvoice(row.original)}>Send Reminder</Button>
           )}
-          <select
-            className="h-8 rounded border px-2 text-xs"
-            value={row.original.status}
-            onChange={(event) => onUpdateStatus(row.original.id, event.target.value as InvoiceListItem["status"])}
-          >
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
         </div>
       ),
     },
@@ -82,13 +69,13 @@ export function InvoiceTable({
 
   return (
     <div className="space-y-3">
-      <Tabs defaultValue="all">
+      <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | InvoiceListItem["status"])}>
         <TabsList>
-          <TabsTrigger value="all" onClick={() => setStatusFilter("all")}>All</TabsTrigger>
-          <TabsTrigger value="sent" onClick={() => setStatusFilter("sent")}>Sent</TabsTrigger>
-          <TabsTrigger value="paid" onClick={() => setStatusFilter("paid")}>Paid</TabsTrigger>
-          <TabsTrigger value="overdue" onClick={() => setStatusFilter("overdue")}>Overdue</TabsTrigger>
-          <TabsTrigger value="draft" onClick={() => setStatusFilter("draft")}>Draft</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="sent">Sent</TabsTrigger>
+          <TabsTrigger value="paid">Paid</TabsTrigger>
+          <TabsTrigger value="overdue">Overdue</TabsTrigger>
+          <TabsTrigger value="draft">Draft</TabsTrigger>
         </TabsList>
       </Tabs>
       <DataTable

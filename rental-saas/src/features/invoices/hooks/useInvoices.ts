@@ -1,10 +1,9 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "../../../app/providers"
 import { useToast } from "../../../components/ui/toast"
 import { QUERY_KEYS } from "../../../lib/constants"
-import { createNotification } from "../../notifications/services"
 import * as invoiceService from "../services/invoiceService"
-import type { CreateInvoiceInput, InvoiceFilters, InvoiceStatus } from "../types"
+import type { CreateInvoiceInput, InvoiceFilters, InvoiceFormInput, InvoiceStatus } from "../types"
 
 export function useInvoices(filters?: InvoiceFilters) {
   const { profile } = useAuth()
@@ -34,27 +33,35 @@ export function useOverdueInvoices() {
 
 export function useCreateInvoice() {
   const queryClient = useQueryClient()
-  const { profile, organization } = useAuth()
+  const { profile } = useAuth()
   const { toast } = useToast()
 
   return useMutation({
     mutationFn: (data: CreateInvoiceInput) => invoiceService.createInvoice(data),
-    onSuccess: async (data, variables) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
-      const prefs = (organization?.settings as any)?.notification_preferences ?? {}
-      if (prefs.rent_reminder !== false && profile?.organization_id) {
-        await createNotification({
-          organization_id: profile.organization_id,
-          recipient_id: variables.tenant_id,
-          type: "rent_reminder",
-          title: "New invoice",
-          body: "A new invoice has been issued.",
-          metadata: { invoice_id: data?.id, target: "/tenant/invoices" },
-        })
+      if (profile?.organization_id) {
+        void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
       }
-      toast({ title: "Invoice created" })
+      toast({ title: "Draft invoice created" })
     },
     onError: (error) => toast({ title: "Failed to create invoice", description: String(error), variant: "destructive" }),
+  })
+}
+
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: InvoiceFormInput }) => invoiceService.updateInvoice(id, data),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES, variables.id] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
+      toast({ title: "Invoice updated" })
+    },
+    onError: (error) => toast({ title: "Failed to update invoice", description: String(error), variant: "destructive" }),
   })
 }
 
@@ -82,11 +89,52 @@ export function usePreviewMonthlyInvoicesCount() {
   })
 }
 
+export function useInvoiceTenantUnits(tenantId?: string) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.INVOICES, "tenant-units", tenantId],
+    queryFn: () => invoiceService.getTenantUnitsForInvoice(tenantId as string),
+    enabled: Boolean(tenantId),
+  })
+}
+
+export function useTenantAvailableCredit(tenantId?: string) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.INVOICES, "tenant-credit", tenantId],
+    queryFn: () => invoiceService.getTenantAvailableCredit(tenantId as string),
+    enabled: Boolean(tenantId),
+  })
+}
+
 export function useMarkInvoiceSent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => invoiceService.markInvoiceSent(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] }),
+    onSuccess: (_data, invoiceId) => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES, invoiceId] })
+    },
+  })
+}
+
+export function useApplyInvoiceCredit() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: (id: string) => invoiceService.applyInvoiceCredit(id),
+    onSuccess: (result, invoiceId) => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVOICES, invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PAYMENTS] })
+      toast({
+        title: result.applied_amount > 0 ? "Credit applied" : "No credit available",
+        description: result.applied_amount > 0
+          ? `Applied KES ${result.applied_amount.toLocaleString("en-KE")} to the invoice.`
+          : "This tenant has no unapplied credit for this invoice.",
+      })
+    },
+    onError: (error) => toast({ title: "Failed to apply credit", description: String(error), variant: "destructive" }),
   })
 }
 

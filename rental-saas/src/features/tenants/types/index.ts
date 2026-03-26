@@ -2,6 +2,8 @@ import { z } from "zod"
 import { kenyanPhone } from "../../../lib/utils/validators"
 
 export const leaseStatusValues = ["pending", "active", "expired", "terminated"] as const
+export type LeaseStatus = (typeof leaseStatusValues)[number]
+export const leaseCreateStatusValues: LeaseStatus[] = ["pending", "active"]
 
 export const tenantInviteSchema = z.object({
   full_name: z.string().min(2),
@@ -9,6 +11,12 @@ export const tenantInviteSchema = z.object({
   phone: kenyanPhone,
   national_id: z.string().optional(),
   unit_id: z.string().uuid().optional(),
+})
+
+export const tenantUpdateSchema = z.object({
+  full_name: z.string().min(2),
+  phone: kenyanPhone,
+  national_id: z.string().optional(),
 })
 
 export const leaseSchema = z.object({
@@ -23,6 +31,7 @@ export const leaseSchema = z.object({
 })
 
 export type TenantInviteInput = z.infer<typeof tenantInviteSchema>
+export type TenantUpdateInput = z.infer<typeof tenantUpdateSchema>
 export type LeaseFormInput = z.infer<typeof leaseSchema>
 
 export interface TenantRow {
@@ -42,6 +51,7 @@ export interface TenantRow {
     property_name: string | null
   } | null
   outstanding_balance: number
+  available_credit: number
 }
 
 export interface LeaseRecord {
@@ -52,17 +62,23 @@ export interface LeaseRecord {
   end_date: string | null
   monthly_rent: number
   deposit_paid: number
-  status: "active" | "expired" | "terminated" | "pending"
+  status: LeaseStatus
   terms: string | null
   termination_reason: string | null
   terminated_at: string | null
   unit_number?: string | null
   property_name?: string | null
+  tenant_name?: string | null
+  tenant_phone?: string | null
+  tenant_national_id?: string | null
+  tenant_email?: string | null
 }
 
 export interface PaymentRecord {
   id: string
   amount: number
+  allocated_amount?: number
+  unapplied_credit_amount?: number
   created_at: string
   status: string
   payment_method: string
@@ -80,4 +96,13 @@ export interface TenantDetails extends TenantRow {
   leases: LeaseRecord[]
   payments: PaymentRecord[]
   maintenanceRequests: MaintenanceRecord[]
+}
+
+export function getLeaseEffectiveStatus(lease: Pick<LeaseRecord, "status" | "end_date">): LeaseStatus {
+  if (lease.status === "terminated") return "terminated"
+  if (lease.end_date) {
+    const endDate = new Date(`${lease.end_date}T23:59:59`)
+    if (!Number.isNaN(endDate.getTime()) && endDate.getTime() < Date.now()) return "expired"
+  }
+  return lease.status
 }

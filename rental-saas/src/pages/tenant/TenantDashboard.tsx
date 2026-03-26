@@ -21,7 +21,7 @@ export function TenantDashboard() {
         supabase.from("invoices").select("*").eq("tenant_id", profile?.id).order("due_date", { ascending: false }),
         supabase
           .from("leases")
-          .select("*, unit:units(unit_number), property:properties(name)")
+          .select("*, unit:units(unit_number, property:properties(name))")
           .eq("tenant_id", profile?.id)
           .in("status", ["active", "pending"])
           .limit(1)
@@ -79,8 +79,8 @@ export function TenantDashboard() {
           <Card>
             <CardHeader><CardTitle>Lease Summary</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><Home className="mr-1 inline h-4 w-4" /> {data?.lease?.property?.name ?? "Property"} • Unit {data?.lease?.unit?.unit_number ?? "-"}</p>
-              <p><CalendarDays className="mr-1 inline h-4 w-4" /> {data?.lease?.start_date ? formatDate(data.lease.start_date) : "-"} → {data?.lease?.end_date ? formatDate(data.lease.end_date) : "Open"}</p>
+              <p><Home className="mr-1 inline h-4 w-4" /> {data?.lease?.unit?.property?.name ?? "Property"} • Unit {data?.lease?.unit?.unit_number ?? "-"}</p>
+              <p><CalendarDays className="mr-1 inline h-4 w-4" /> {data?.lease?.start_date ? formatDate(data.lease.start_date) : "-"} - {data?.lease?.end_date ? formatDate(data.lease.end_date) : "Open"}</p>
               <p>Monthly rent: {formatKES(Number(data?.lease?.monthly_rent ?? 0))}</p>
               <p>Deposit paid: {formatKES(Number(data?.lease?.deposit_paid ?? 0))}</p>
             </CardContent>

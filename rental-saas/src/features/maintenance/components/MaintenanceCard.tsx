@@ -26,13 +26,11 @@ const categoryIcon: Record<MaintenanceRequest["category"], ReactElement> = {
 export function MaintenanceCard({
   request,
   role,
-  onAssign,
-  onUpdateStatus,
+  onUpdate,
 }: {
   request: MaintenanceRequest
   role: UserRole
-  onAssign?: () => void
-  onUpdateStatus?: () => void
+  onUpdate?: () => void
 }) {
   return (
     <Card>
@@ -68,8 +66,16 @@ export function MaintenanceCard({
 
         {role !== "tenant" && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={onAssign}>Assign</Button>
-            <Button size="sm" onClick={onUpdateStatus}>Update Status</Button>
+            <Button
+              size="sm"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                onUpdate?.()
+              }}
+            >
+              Update
+            </Button>
           </div>
         )}
       </CardContent>

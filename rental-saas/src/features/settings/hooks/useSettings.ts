@@ -3,7 +3,7 @@ import { useAuth } from "../../../app/providers"
 import { useToast } from "../../../components/ui/toast"
 import { QUERY_KEYS } from "../../../lib/constants"
 import * as settingsService from "../services"
-import type { OrganizationSettingsInput, ProvisionOrganizationInput } from "../types"
+import type { OperationalSettingsInput, OwnerSettingsInput, OwnershipTransferInput, ProvisionOrganizationInput } from "../types"
 
 export function useOrganizationSettings() {
   const { profile } = useAuth()
@@ -15,20 +15,38 @@ export function useOrganizationSettings() {
   })
 }
 
-export function useUpdateOrganizationSettings() {
+export function useUpdateOperationalSettings() {
   const queryClient = useQueryClient()
   const { profile } = useAuth()
   const { toast } = useToast()
 
   return useMutation({
-    mutationFn: (payload: OrganizationSettingsInput) =>
-      settingsService.updateOrganizationSettings(profile?.organization_id as string, payload),
+    mutationFn: (payload: OperationalSettingsInput) =>
+      settingsService.updateOperationalSettings(profile?.organization_id as string, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] })
-      toast({ title: "Organization settings updated" })
+      toast({ title: "Operational settings updated" })
     },
     onError: (error) => {
       toast({ title: "Failed to update settings", description: String(error), variant: "destructive" })
+    },
+  })
+}
+
+export function useUpdateOwnerSettings() {
+  const queryClient = useQueryClient()
+  const { profile } = useAuth()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: (payload: OwnerSettingsInput) =>
+      settingsService.updateOwnerSettings(profile?.organization_id as string, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] })
+      toast({ title: "Owner settings updated" })
+    },
+    onError: (error) => {
+      toast({ title: "Failed to update owner settings", description: String(error), variant: "destructive" })
     },
   })
 }
@@ -76,6 +94,23 @@ export function useUpdateTeamMemberStatus() {
     },
     onError: (error) => {
       toast({ title: "Failed to update team member", description: String(error), variant: "destructive" })
+    },
+  })
+}
+
+export function useUpdateTeamMemberRole() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: "admin" | "agent" }) =>
+      settingsService.updateTeamMemberRole(memberId, role),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TEAM_MEMBERS] })
+      toast({ title: "Team member role updated" })
+    },
+    onError: (error) => {
+      toast({ title: "Failed to update role", description: String(error), variant: "destructive" })
     },
   })
 }
@@ -291,6 +326,55 @@ export function useDeleteUserAsSuperAdmin() {
     },
     onError: (error) => {
       toast({ title: "Failed to delete user", description: String(error), variant: "destructive" })
+    },
+  })
+}
+
+export function useTransferOwnership() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: (payload: OwnershipTransferInput) => settingsService.transferOwnership(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TEAM_MEMBERS] })
+      toast({ title: "Ownership transferred" })
+    },
+    onError: (error) => {
+      toast({ title: "Failed to transfer ownership", description: String(error), variant: "destructive" })
+    },
+  })
+}
+
+export function useArchiveOrganizationAsOwner() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ confirm_name }: { confirm_name: string }) => settingsService.archiveOrganizationAsOwner({ confirm_name }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] })
+      toast({ title: "Organization archived" })
+    },
+    onError: (error) => {
+      toast({ title: "Failed to archive organization", description: String(error), variant: "destructive" })
+    },
+  })
+}
+
+export function useDeleteOrganizationAsOwner() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: ({ confirm_name }: { confirm_name: string }) => settingsService.deleteOrganizationAsOwner({ confirm_name }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] })
+      toast({ title: "Organization deleted" })
+    },
+    onError: (error) => {
+      toast({ title: "Failed to delete organization", description: String(error), variant: "destructive" })
     },
   })
 }

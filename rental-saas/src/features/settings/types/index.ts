@@ -26,6 +26,9 @@ export interface OrganizationPreferences {
   timezone: string
   date_format: string
   notification_preferences?: NotificationPreferences
+}
+
+export interface OwnerCredentialPreferences {
   mpesa_consumer_key?: string
   mpesa_consumer_secret?: string
   sms_api_key?: string
@@ -34,12 +37,19 @@ export interface OrganizationPreferences {
   sms_automation?: SmsAutomationPreferences
 }
 
-export interface OrganizationSettingsInput {
+export interface OperationalSettingsInput {
+  settings: OrganizationPreferences
+}
+
+export interface OwnerSettingsInput {
   name: string
   slug: string
   logo_url: string | null
   subscription_plan: SubscriptionPlan
-  settings: OrganizationPreferences
+  mpesa_shortcode: string | null
+  mpesa_nominated_number: string | null
+  mpesa_env: "sandbox" | "production"
+  settings: OwnerCredentialPreferences
 }
 
 export interface TeamMember {
@@ -67,8 +77,12 @@ export interface AgentPropertyAssignment {
 
 export interface StaffInviteInput {
   email: string
-  role: Extract<UserRole, "landlord" | "admin" | "agent">
+  role: Extract<UserRole, "admin" | "agent">
   full_name?: string
+}
+
+export interface OwnershipTransferInput {
+  target_user_id: string
 }
 
 export interface PlatformOrganizationSummary {

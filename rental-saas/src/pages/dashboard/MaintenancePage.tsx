@@ -8,7 +8,7 @@ import { useProperties } from "../../features/properties/hooks"
 import {
   useMaintenanceRequests,
   useMaintenanceStats,
-  useUpdateMaintenanceStatus,
+  useUpdateMaintenanceWorkflow,
 } from "../../features/maintenance/hooks"
 import type { MaintenanceRequest } from "../../features/maintenance/types"
 import { MaintenanceKanban, MaintenanceStatusForm, MaintenanceTable } from "../../features/maintenance/components"
@@ -36,7 +36,7 @@ export function MaintenancePage() {
   const { data: requests = [] } = useMaintenanceRequests(filters)
   const { data: properties = [] } = useProperties()
   const { data: stats } = useMaintenanceStats()
-  const updateStatus = useUpdateMaintenanceStatus()
+  const updateWorkflow = useUpdateMaintenanceWorkflow()
 
   return (
     <div className="space-y-6">
@@ -106,12 +106,14 @@ export function MaintenancePage() {
               setSelectedRequest(request)
               return
             }
-            void updateStatus.mutateAsync({
+            void updateWorkflow.mutateAsync({
               id: request.id,
               status: nextStatus,
               tenantId: request.tenant_id,
               organizationId: profile?.organization_id,
               title: request.title,
+              previousStatus: request.status,
+              previousAssignedTo: request.assigned_to ?? null,
             })
           }}
         />

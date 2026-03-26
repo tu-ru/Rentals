@@ -1,17 +1,34 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs"
 import { formatDate, formatKES } from "../../../lib/utils/format"
-import { useRenewLease, useTerminateLease, useTenant } from "../hooks"
+import { useTenant } from "../hooks"
+import { getLeaseEffectiveStatus } from "../types"
 import { LeaseCard } from "./LeaseCard"
+import { RenewLeaseDialog } from "./RenewLeaseDialog"
+import { TerminateLeaseDialog } from "./TerminateLeaseDialog"
 import { SendSmsDialog } from "../../sms/components"
 
-export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; onClose: () => void }) {
+export function TenantProfileDrawer({
+  tenantId,
+  onClose,
+  onEdit,
+}: {
+  tenantId?: string
+  onClose: () => void
+  onEdit: () => void
+}) {
   const { data: tenant } = useTenant(tenantId)
-  const terminateLease = useTerminateLease()
-  const renewLease = useRenewLease()
   const [smsOpen, setSmsOpen] = useState(false)
+  const [renewOpen, setRenewOpen] = useState(false)
+  const [terminateOpen, setTerminateOpen] = useState(false)
+
+  const currentLease = useMemo(
+    () => tenant?.leases.find((lease) => lease.status === "active") ?? tenant?.leases[0] ?? null,
+    [tenant?.leases],
+  )
+  const currentLeaseStatus = currentLease ? getLeaseEffectiveStatus(currentLease) : null
 
   if (!tenantId) return null
 
@@ -21,6 +38,7 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Tenant Profile</h3>
           <div className="flex items-center gap-2">
+            {tenant && <Button size="sm" variant="outline" onClick={onEdit}>Edit</Button>}
             {tenant && (
               <Button size="sm" variant="outline" onClick={() => setSmsOpen(true)}>Send SMS</Button>
             )}
@@ -35,6 +53,8 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
               <p className="text-sm text-muted-foreground">{tenant.phone ?? "No phone"}</p>
               <p className="text-sm text-muted-foreground">{tenant.email ?? "Email available after first login"}</p>
               <p className="text-sm text-muted-foreground">National ID: {tenant.national_id ?? "-"}</p>
+              <p className="text-sm text-muted-foreground">Outstanding balance: {formatKES(tenant.outstanding_balance)}</p>
+              <p className="text-sm text-emerald-700">Available credit: {formatKES(tenant.available_credit)}</p>
               <Badge>{tenant.is_active ? "active" : "inactive"}</Badge>
             </div>
 
@@ -46,30 +66,12 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
               </TabsList>
 
               <TabsContent value="lease" className="mt-4 space-y-3">
-                <LeaseCard lease={tenant.leases.find((lease) => lease.status === "active") ?? null} />
+                <LeaseCard lease={currentLease} />
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const active = tenant.leases.find((lease) => lease.status === "active")
-                      if (!active) return
-                      const reason = window.prompt("Reason for termination") ?? ""
-                      if (!reason) return
-                      void terminateLease.mutateAsync({ id: active.id, reason })
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => setTerminateOpen(true)} disabled={!currentLease || currentLeaseStatus === "terminated"}>
                     Terminate
                   </Button>
-                  <Button
-                    onClick={() => {
-                      const active = tenant.leases.find((lease) => lease.status === "active")
-                      if (!active) return
-                      const endDate = window.prompt("New end date (YYYY-MM-DD)", active.end_date ?? "")
-                      const rent = window.prompt("New monthly rent", String(active.monthly_rent))
-                      if (!endDate || !rent) return
-                      void renewLease.mutateAsync({ id: active.id, endDate, rent: Number(rent) })
-                    }}
-                  >
+                  <Button onClick={() => setRenewOpen(true)} disabled={!currentLease || currentLeaseStatus === "terminated"}>
                     Renew
                   </Button>
                 </div>
@@ -104,10 +106,12 @@ export function TenantProfileDrawer({ tenantId, onClose }: { tenantId?: string; 
               tenantPhone={tenant.phone}
               defaultMessageType="paybill_info"
               defaultVariables={{
-                unit_number: tenant.activeLease?.unit_number ?? "",
-                property_name: tenant.activeLease?.property_name ?? "",
+                unit_number: tenant.activeLease?.unit_number ?? currentLease?.unit_number ?? "",
+                property_name: tenant.activeLease?.property_name ?? currentLease?.property_name ?? "",
               }}
             />
+            <RenewLeaseDialog open={renewOpen} onOpenChange={setRenewOpen} lease={currentLease} />
+            <TerminateLeaseDialog open={terminateOpen} onOpenChange={setTerminateOpen} lease={currentLease} />
           </>
         ) : (
           <p className="text-sm text-muted-foreground">Loading...</p>

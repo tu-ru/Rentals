@@ -50,6 +50,20 @@ export function useRealtimeMessages(conversationId?: string) {
     }
   }, [conversationId])
 
+  useEffect(() => {
+    if (!conversationId || !profile?.id) return
+    void messagingService.markAsRead(conversationId, profile.id)
+  }, [conversationId, profile?.id])
+
+  useEffect(() => {
+    if (!conversationId || !profile?.id || !messages.length) return
+
+    const latest = messages[messages.length - 1]
+    if (latest?.sender_id !== profile.id && latest?.is_read === false) {
+      void messagingService.markAsRead(conversationId, profile.id)
+    }
+  }, [conversationId, messages, profile?.id])
+
   const send = useCallback(
     async (body: string) => {
       if (!conversationId || !profile?.id) return

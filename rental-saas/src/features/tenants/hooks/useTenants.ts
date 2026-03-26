@@ -45,8 +45,9 @@ export function useUpdateTenant() {
   const { toast } = useToast()
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => tenantService.updateTenant(id, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS, variables.id] })
       toast({ title: "Tenant updated" })
     },
   })
@@ -84,25 +85,55 @@ export function useLeases() {
   })
 }
 
-export function useTerminateLease() {
+export function useLease(id?: string) {
+  return useQuery({
+    queryKey: [QUERY_KEYS.LEASES, "detail", id],
+    queryFn: () => tenantService.getLease(id as string),
+    enabled: Boolean(id),
+  })
+}
+
+export function useUpdateLease() {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => tenantService.terminateLease(id, reason),
-    onSuccess: () => {
+    mutationFn: ({ id, data }: { id: string; data: Partial<LeaseFormInput> }) => tenantService.updateLease(id, data),
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNITS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES, "detail", variables.id] })
+      toast({ title: "Lease updated" })
+    },
+  })
+}
+
+export function useTerminateLease() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => tenantService.terminateLease(id, reason),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNITS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES, "detail", variables.id] })
+      toast({ title: "Lease terminated" })
     },
   })
 }
 
 export function useRenewLease() {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   return useMutation({
     mutationFn: ({ id, endDate, rent }: { id: string; endDate: string; rent: number }) => tenantService.renewLease(id, endDate, rent),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES] })
       void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TENANTS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.UNITS] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEASES, "detail", variables.id] })
+      toast({ title: "Lease renewed" })
     },
   })
 }
