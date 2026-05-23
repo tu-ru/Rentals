@@ -52,7 +52,11 @@ export function TenantDashboard() {
   const overdue = dueDate ? dueDate < today && Number(nextInvoice.balance ?? 0) > 0 : false
   const paid = Number(currentBalance ?? 0) <= 0
 
-  const balanceTone = paid ? "border-emerald-300 bg-emerald-50" : overdue ? "border-red-300 bg-red-50" : "border-blue-300 bg-blue-50"
+  const balanceTone = paid
+    ? "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-100"
+    : overdue
+      ? "border-red-200 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-100"
+      : "border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-100"
 
   return (
     <TenantLayout title="Dashboard">
@@ -65,12 +69,18 @@ export function TenantDashboard() {
         </Card>
 
         <Card className={balanceTone}>
-          <CardHeader><CardTitle>Current Balance Due</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-current">Current Balance Due</CardTitle>
+          </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{formatKES(currentBalance)}</p>
-            <p className="mt-2 text-sm">Next payment due: {nextInvoice?.due_date ? formatDate(nextInvoice.due_date) : "N/A"}</p>
+            <p className="text-4xl font-bold text-current">{formatKES(currentBalance)}</p>
+            <p className="mt-2 text-sm text-current/80">Next payment due: {nextInvoice?.due_date ? formatDate(nextInvoice.due_date) : "N/A"}</p>
             <div className="mt-4">
-              <Link to="/tenant/invoices"><Button>View Invoice</Button></Link>
+              <Link to="/tenant/invoices">
+                <Button className="bg-foreground text-background hover:bg-foreground/90 dark:bg-background dark:text-foreground dark:hover:bg-background/90">
+                  View Invoice
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

@@ -12,7 +12,7 @@ const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [dismissedUntil, setDismissedUntil] = useLocalStorage<number>("rentms-install-dismissed-until", 0)
+  const [dismissedUntil, setDismissedUntil] = useLocalStorage<number>("habiqo-install-dismissed-until", 0)
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -50,7 +50,7 @@ export function InstallPrompt() {
       <div className="flex items-center gap-3">
         <div className="rounded-md bg-primary/10 p-2 text-primary"><Download className="h-4 w-4" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Install RentMS for quick access</p>
+          <p className="text-sm font-medium">Install K535 for quick access</p>
           <p className="text-xs text-muted-foreground">Add this app to your home screen for a faster experience.</p>
         </div>
         <Button size="sm" onClick={() => void onInstall()}>Install</Button>

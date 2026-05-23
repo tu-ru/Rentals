@@ -18,7 +18,7 @@ const values = [
   },
   {
     title: "Financial discipline",
-    body: "RentMS keeps invoices, payments, and receipts in lockstep to reduce leakage and improve collection rates.",
+    body: "K535 keeps invoices, payments, and receipts in lockstep to reduce leakage and improve collection rates.",
   },
   {
     title: "Scalable workflows",
@@ -36,7 +36,7 @@ export function AboutPage() {
             A rental operating system built for Kenyan property teams.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground">
-            RentMS Kenya was designed for landlords and agents managing growing portfolios. Our focus is operational clarity: everyone on the team can see what is owed, what is resolved, and what needs immediate action.
+            K535 was designed for landlords and agents managing growing portfolios. Our focus is operational clarity: everyone on the team can see what is owed, what is resolved, and what needs immediate action.
           </p>
         </motion.div>
       </section>
@@ -74,7 +74,7 @@ export function AboutPage() {
             <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Our mission</p>
             <h2 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "'Fraunces', serif" }}>How we help your team scale</h2>
             <p className="mt-4 text-muted-foreground">
-              We help teams replace fragmented spreadsheets with a structured system. RentMS shows occupancy, collections, and maintenance workloads in real time so managers can allocate resources where they matter most.
+              We help teams replace fragmented spreadsheets with a structured system. K535 shows occupancy, collections, and maintenance workloads in real time so managers can allocate resources where they matter most.
             </p>
             <p className="mt-4 text-muted-foreground">
               Automation handles reminders, SMS notifications, and reporting while your team focuses on tenant relationships and property performance.

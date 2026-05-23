@@ -171,7 +171,7 @@ export function OnboardingWizard() {
         >
           {step === 1 && (
             <>
-              <h3 className="text-lg font-semibold">Welcome to RentMS</h3>
+              <h3 className="text-lg font-semibold">Welcome to K535</h3>
               <p className="text-sm text-muted-foreground">Confirm your organization details to proceed.</p>
               <div>
                 <Label>Organization name</Label>

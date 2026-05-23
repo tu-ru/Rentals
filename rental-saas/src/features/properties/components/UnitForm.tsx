@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createUnitSchema, type CreateUnitInput, type Unit } from "../types/property.types"
-import { useAuth } from "../../../app/providers"
 import { useCreateUnit, useUpdateUnit } from "../hooks/useProperties"
-import * as propertyService from "../services/propertyService"
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
 import { Input } from "../../../components/ui/input"
@@ -20,12 +18,9 @@ interface UnitFormProps {
 const FEATURE_TAGS = ["Balcony", "Ensuite", "Parking", "Water Included", "Furnished", "WiFi Ready"]
 
 export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps) {
-  const { profile } = useAuth()
   const createMutation = useCreateUnit()
   const updateMutation = useUpdateUnit()
   const [features, setFeatures] = useState<string[]>(unit?.features ?? [])
-  const [images, setImages] = useState<string[]>(unit?.images ?? [])
-  const [imageFiles, setImageFiles] = useState<File[]>([])
   const isEdit = Boolean(unit)
 
   const defaults = useMemo<CreateUnitInput>(
@@ -52,19 +47,12 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
   useEffect(() => {
     form.reset(defaults)
     setFeatures(defaults.features ?? [])
-    setImages(defaults.images ?? [])
-    setImageFiles([])
   }, [defaults, form])
 
   const loading = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = form.handleSubmit(async (values) => {
-    let uploadedImageUrls: string[] = []
-    if (imageFiles.length > 0 && profile?.organization_id) {
-      uploadedImageUrls = await propertyService.uploadUnitImages(profile.organization_id, imageFiles)
-    }
-
-    const payload = { ...values, property_id: propertyId, features, images: [...images, ...uploadedImageUrls] }
+    const payload = { ...values, property_id: propertyId, features, images: unit?.images ?? [] }
     if (isEdit && unit) {
       await updateMutation.mutateAsync({ id: unit.id, data: payload, propertyId })
     } else {
@@ -127,30 +115,6 @@ export function UnitForm({ open, onOpenChange, propertyId, unit }: UnitFormProps
                   </button>
                 )
               })}
-            </div>
-          </div>
-
-          <div>
-            <Label>Unit image gallery</Label>
-            <Input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
-            />
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {images.map((image) => (
-                <div key={image} className="relative overflow-hidden rounded border">
-                  <img src={image} alt="Unit" className="h-16 w-full object-cover" />
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1 rounded bg-black/60 px-1 text-xs text-white"
-                    onClick={() => setImages((prev) => prev.filter((url) => url !== image))}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
             </div>
           </div>
 

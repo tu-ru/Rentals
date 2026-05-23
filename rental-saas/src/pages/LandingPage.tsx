@@ -5,25 +5,25 @@ import { MarketingLayout } from "../components/layouts"
 import { useAuth } from "../app/providers"
 import type { UserRole } from "../types/auth.types"
 
-const stats = [
-  { label: "Units tracked", value: "2,400+" },
-  { label: "Monthly collections", value: "KES 120M" },
-  { label: "Avg. response time", value: "< 2 hours" },
-]
-
 const highlights = [
   {
-    title: "Complete rental operations",
-    body: "From leasing to collections, every workflow is connected so your team operates from one source of truth.",
+    title: "Organized communication",
+    body: "Messages, notices, and reminders stay visible to the whole team.",
   },
   {
-    title: "Tenant-first experience",
-    body: "Tenants get a mobile portal for payments, maintenance, and messaging so support volume drops while satisfaction rises.",
+    title: "Clear cash flow",
+    body: "Invoices, payments, balances, and arrears stay aligned.",
   },
   {
-    title: "Actionable analytics",
-    body: "Real-time KPIs, reports, and exports surface the health of your portfolio and spotlight risks early.",
+    title: "Better follow-through",
+    body: "Teams can see what still needs action.",
   },
+]
+
+const focusPoints = [
+  "Track tenant communication clearly.",
+  "Keep rent and arrears visible.",
+  "Give tenants one clear channel.",
 ]
 
 const sectionVariants = {
@@ -52,12 +52,12 @@ export function LandingPage() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.08] mix-blend-soft-light" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.7'/%3E%3C/svg%3E\")" }} />
         <div className="relative mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[1.2fr_0.8fr]">
           <motion.div initial="hidden" animate="visible" variants={sectionVariants} transition={{ duration: 0.5 }}>
-            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Modern Rental Operations</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Property control with a narrower focus</p>
             <h1 className="mt-4 text-5xl font-semibold leading-tight md:text-6xl" style={{ fontFamily: "'Fraunces', serif" }}>
-              Run your rentals like a high-performing company.
+              Clear messaging. Clear cash flow.
             </h1>
             <p className="mt-6 text-lg text-muted-foreground">
-              RentMS Kenya unifies property operations, tenant experiences, and financial controls in one system. From M-Pesa reconciliation to maintenance SLAs, everything stays connected, measurable, and auditable.
+              K535 helps rental teams reduce communication gaps and understand money movement faster.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to={isLoggedIn ? dashboardHref : "/login"}>
@@ -65,13 +65,16 @@ export function LandingPage() {
               </Link>
               <Link to="/features"><Button variant="outline" className="px-6">Explore features</Button></Link>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="rounded-2xl border border-border bg-card/70 p-4">
-                  <p className="text-2xl font-semibold">{stat.value}</p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{stat.label}</p>
-                </div>
-              ))}
+            <div className="mt-10 rounded-3xl border border-border bg-card/70 p-6">
+              <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">What the platform helps you control</p>
+              <div className="mt-5 grid gap-4">
+                {focusPoints.map((point) => (
+                  <div key={point} className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/60 px-4 py-4">
+                    <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" />
+                    <p className="text-sm text-muted-foreground">{point}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
           <motion.div
@@ -81,22 +84,19 @@ export function LandingPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="rounded-3xl border border-border bg-card/80 p-6 shadow-xl"
           >
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Platform Snapshot</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">A simpler view</p>
             <div className="mt-6 space-y-4">
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs text-muted-foreground">Revenue MTD</p>
-                <p className="text-3xl font-semibold">KES 18,420,000</p>
-                <p className="text-xs text-emerald-500">+12.4% vs last month</p>
+              <div className="rounded-2xl border border-border bg-muted/30 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tenant Messaging</p>
+                <p className="mt-3 text-2xl font-semibold">Send reminders, notices, and updates from one clear workflow.</p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs text-muted-foreground">Occupancy</p>
-                <p className="text-3xl font-semibold">94.2%</p>
-                <p className="text-xs text-muted-foreground">Target 80%</p>
+              <div className="rounded-2xl border border-border bg-muted/30 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Cash Visibility</p>
+                <p className="mt-3 text-2xl font-semibold">Keep invoices, payments, and balances easy to verify.</p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs text-muted-foreground">Open Maintenance</p>
-                <p className="text-3xl font-semibold">27</p>
-                <p className="text-xs text-muted-foreground">Emergency: 2</p>
+              <div className="rounded-2xl border border-border bg-muted/30 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Follow-up</p>
+                <p className="mt-3 text-2xl font-semibold">See who still needs a message, a payment, or a response.</p>
               </div>
             </div>
           </motion.div>
@@ -132,17 +132,17 @@ export function LandingPage() {
             className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]"
           >
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Why RentMS</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Why K535</p>
               <h2 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "'Fraunces', serif" }}>
-                Built for teams managing real-world rental operations.
+                Built for communication discipline and financial transparency.
               </h2>
               <p className="mt-4 text-muted-foreground">
-                Our workflows mirror how Kenyan property teams actually operate: M-Pesa collections, high tenant turnover, and real-time service needs. RentMS gives you visibility without adding admin overhead.
+                It focuses on the parts of rental operations that break trust fastest: unclear tenant communication and unclear money movement.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-muted/30 p-6">
-              <p className="text-sm font-semibold">Explore the full platform</p>
-              <p className="mt-2 text-sm text-muted-foreground">Detailed feature breakdowns, use cases, and role-based capabilities.</p>
+              <p className="text-sm font-semibold">Explore the product focus</p>
+              <p className="mt-2 text-sm text-muted-foreground">See how communication workflows and payment visibility fit together.</p>
               <Link to="/features"><Button className="mt-4">Go to Features</Button></Link>
             </div>
           </motion.div>
@@ -162,7 +162,7 @@ export function LandingPage() {
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-background/70">Ready to build momentum?</p>
               <h2 className="mt-3 text-3xl font-semibold" style={{ fontFamily: "'Fraunces', serif" }}>
-                Start with a tailored onboarding for your portfolio.
+                Start with a clearer operating rhythm.
               </h2>
             </div>
             <div className="flex gap-3">
@@ -171,7 +171,7 @@ export function LandingPage() {
                   {isLoggedIn ? "Go to dashboard" : "Sign in"}
                 </Button>
               </Link>
-              <Link to="/contact"><Button variant="outline" className="border-background/60 text-foreground hover:bg-background/15">Talk to sales</Button></Link>
+              <Link to="/contact"><Button variant="outline" className="border-background/60 text-foreground hover:bg-background/15">Request access</Button></Link>
             </div>
           </div>
         </motion.div>

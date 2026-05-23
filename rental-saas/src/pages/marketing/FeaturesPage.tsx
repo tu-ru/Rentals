@@ -69,7 +69,7 @@ export function FeaturesPage() {
             Every feature designed for modern rental operations.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground">
-            RentMS covers the full operational lifecycle from leasing to maintenance, with the analytics and automation you need to keep your portfolio healthy.
+            K535 covers the full operational lifecycle from leasing to maintenance, with the analytics and automation you need to keep your portfolio healthy.
           </p>
         </motion.div>
       </section>

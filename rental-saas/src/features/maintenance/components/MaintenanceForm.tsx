@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { useAuth } from "../../../app/providers"
 import { Button } from "../../../components/ui/button"
@@ -13,8 +13,6 @@ import { createMaintenanceSchema, maintenanceCategoryValues, type CreateMaintena
 export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean; onOpenChange: (open: boolean) => void; unitId: string }) {
   const { profile } = useAuth()
   const createMutation = useCreateMaintenanceRequest()
-  const [images, setImages] = useState<File[]>([])
-  const [uploadProgress, setUploadProgress] = useState(0)
 
   const form = useForm<CreateMaintenanceInput>({
     resolver: zodResolver(createMaintenanceSchema),
@@ -33,14 +31,8 @@ export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean;
     form.setValue("unit_id", unitId)
   }, [form, unitId])
 
-  const previews = useMemo(() => images.map((file) => URL.createObjectURL(file)), [images])
-
   const submit = form.handleSubmit(async (values) => {
-    setUploadProgress(10)
-    const selected = images.slice(0, 5)
-    await createMutation.mutateAsync({ data: values, images: selected })
-    setUploadProgress(100)
-    setImages([])
+    await createMutation.mutateAsync({ data: values, images: [] })
     form.reset({ ...values, title: "", description: "" })
     onOpenChange(false)
   })
@@ -50,7 +42,7 @@ export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean;
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Submit Maintenance Request</DialogTitle>
-          <DialogDescription>Describe the issue and attach up to 5 supporting photos.</DialogDescription>
+          <DialogDescription>Describe the issue so the team can act on it.</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={submit}>
@@ -87,26 +79,6 @@ export function MaintenanceForm({ open, onOpenChange, unitId }: { open: boolean;
               {...form.register("description")}
             />
             <p className="text-xs text-red-500">{form.formState.errors.description?.message}</p>
-          </div>
-
-          <div>
-            <Label>Images (max 5)</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(event) => {
-                const files = Array.from(event.target.files ?? []).slice(0, 5)
-                setImages(files)
-                setUploadProgress(files.length ? 25 : 0)
-              }}
-            />
-            {!!images.length && <p className="mt-1 text-xs text-muted-foreground">Upload progress: {uploadProgress}%</p>}
-            <div className="mt-2 flex flex-wrap gap-2">
-              {previews.map((preview, index) => (
-                <img key={index} src={preview} alt={`preview-${index}`} className="h-16 w-16 rounded object-cover" />
-              ))}
-            </div>
           </div>
 
           <DialogFooter>

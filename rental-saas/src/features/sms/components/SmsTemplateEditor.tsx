@@ -38,7 +38,7 @@ const sampleData: Record<string, string> = {
   paybill: "174379",
   account_number: "INV-202604-1234",
   balance: "KES 10,500",
-  org_name: "RentMS",
+  org_name: "K535",
   lease_end_date: "2026-12-31",
   invoice_number: "INV-202604-1234",
   transaction_id: "QK123ABC9D",

@@ -1,4 +1,4 @@
-# Database Migrations — RentMS Kenya
+# Database Migrations — K535
 
 ## Prerequisites
 

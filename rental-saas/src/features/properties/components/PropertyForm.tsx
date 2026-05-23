@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createPropertySchema, propertyTypeValues, type CreatePropertyInput, type Property } from "../types/property.types"
-import { useAuth } from "../../../app/providers"
 import { useCreateProperty, useUpdateProperty } from "../hooks/useProperties"
-import * as propertyService from "../services/propertyService"
 import { Button } from "../../../components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog"
 import { Input } from "../../../components/ui/input"
@@ -20,13 +18,10 @@ interface PropertyFormProps {
 }
 
 export function PropertyForm({ open, onOpenChange, property }: PropertyFormProps) {
-  const { profile } = useAuth()
   const isEdit = Boolean(property)
   const createMutation = useCreateProperty()
   const updateMutation = useUpdateProperty()
   const [amenities, setAmenities] = useState<string[]>(property?.amenities ?? [])
-  const [images, setImages] = useState<string[]>(property?.images ?? [])
-  const [imageFiles, setImageFiles] = useState<File[]>([])
 
   const defaults = useMemo<CreatePropertyInput>(
     () => ({
@@ -53,19 +48,12 @@ export function PropertyForm({ open, onOpenChange, property }: PropertyFormProps
   useEffect(() => {
     form.reset(defaults)
     setAmenities(defaults.amenities ?? [])
-    setImages(defaults.images ?? [])
-    setImageFiles([])
   }, [defaults, form])
 
   const loading = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = form.handleSubmit(async (values) => {
-    let uploadedImageUrls: string[] = []
-    if (imageFiles.length > 0 && profile?.organization_id) {
-      uploadedImageUrls = await propertyService.uploadPropertyImages(profile.organization_id, imageFiles)
-    }
-
-    const payload = { ...values, amenities, images: [...images, ...uploadedImageUrls] }
+    const payload = { ...values, amenities, images: property?.images ?? [] }
     if (isEdit && property) {
       await updateMutation.mutateAsync({ id: property.id, data: payload })
     } else {
@@ -132,30 +120,6 @@ export function PropertyForm({ open, onOpenChange, property }: PropertyFormProps
                   </button>
                 )
               })}
-            </div>
-          </div>
-
-          <div>
-            <Label>Property image gallery</Label>
-            <Input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
-            />
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {images.map((image) => (
-                <div key={image} className="relative overflow-hidden rounded border">
-                  <img src={image} alt="Property" className="h-16 w-full object-cover" />
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1 rounded bg-black/60 px-1 text-xs text-white"
-                    onClick={() => setImages((prev) => prev.filter((url) => url !== image))}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
             </div>
           </div>
 

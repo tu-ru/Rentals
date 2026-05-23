@@ -36,7 +36,7 @@ export function TenantLayout({ children, title }: { children: ReactNode; title: 
             </button>
             <Link to="/tenant" className="flex items-center gap-2 font-semibold">
               <Shield className="h-5 w-5 text-primary" />
-              <span>RentMS</span>
+              <span>K535</span>
             </Link>
           </div>
 

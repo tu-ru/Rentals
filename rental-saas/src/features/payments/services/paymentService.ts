@@ -91,7 +91,7 @@ async function getConfirmedAllocationTotals(organizationId: string, monthStart: 
 export async function getPayments(organizationId: string, filters?: PaymentFilters): Promise<PaymentItem[]> {
   let query = supabase
     .from("payments")
-    .select("*, tenant:profiles(full_name), invoice:invoices(invoice_number)")
+    .select("*, tenant:profiles!payments_tenant_id_fkey(full_name), invoice:invoices(invoice_number)")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
 
@@ -113,7 +113,7 @@ export async function getPayment(id: string): Promise<PaymentItem> {
   const organizationId = await getOrganizationId()
   const { data, error } = await supabase
     .from("payments")
-    .select("*, tenant:profiles(full_name), invoice:invoices(invoice_number)")
+    .select("*, tenant:profiles!payments_tenant_id_fkey(full_name), invoice:invoices(invoice_number)")
     .eq("organization_id", organizationId)
     .eq("id", id)
     .single()
@@ -206,7 +206,7 @@ export async function getPaymentStats(organizationId: string, month?: number, ye
 export async function getRecentPayments(organizationId: string, limit = 10): Promise<PaymentItem[]> {
   const { data, error } = await supabase
     .from("payments")
-    .select("*, tenant:profiles(full_name), invoice:invoices(invoice_number)")
+    .select("*, tenant:profiles!payments_tenant_id_fkey(full_name), invoice:invoices(invoice_number)")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(limit)

@@ -1,4 +1,4 @@
-# RentMS Kenya
+# K535
 ### Modern Rental Property Management Platform
 
 > A production-ready, multi-tenant SaaS platform built for Kenyan landlords, agents, and tenants — with M-Pesa reconciliation, SMS automation, and real-time features.
@@ -37,7 +37,7 @@
 
 ## Overview
 
-RentMS Kenya is a full-stack rental property management system designed specifically for the Kenyan market. It handles everything a landlord needs: property and unit management, tenant onboarding, lease creation, invoice generation, M-Pesa payment reconciliation via the Safaricom Pull Transactions API, SMS tenant notifications via Celcom Africa, real-time messaging, and a full analytics dashboard.
+K535 is a full-stack rental property management system designed specifically for the Kenyan market. It handles everything a landlord needs: property and unit management, tenant onboarding, lease creation, invoice generation, M-Pesa payment reconciliation via the Safaricom Pull Transactions API, SMS tenant notifications via Celcom Africa, real-time messaging, and a full analytics dashboard.
 
 The platform is built as a **multi-tenant SaaS** — each landlord or property management company operates in a completely isolated organization, with Row Level Security enforced at the database layer.
 
@@ -404,7 +404,7 @@ Enable Realtime on these tables in **Database → Replication**:
 
 ## M-Pesa Integration
 
-RentMS uses the **Safaricom Daraja Pull Transactions API** — a reconciliation tool that queries all C2B transactions under a Paybill or Till number within the last 48 hours.
+K535 uses the **Safaricom Daraja Pull Transactions API** — a reconciliation tool that queries all C2B transactions under a Paybill or Till number within the last 48 hours.
 Each organization stores its own Daraja credentials so testers, landlords, and separate portfolios can use isolated sandbox or production apps.
 
 ### How It Works
@@ -439,7 +439,7 @@ In development, keep each test organization on `sandbox` and save its own consum
 
 ## SMS Integration
 
-RentMS uses the **Celcom Africa REST API** for all SMS communications.
+K535 uses the **Celcom Africa REST API** for all SMS communications.
 
 ### API Reference
 

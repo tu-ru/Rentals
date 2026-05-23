@@ -1,4 +1,6 @@
-﻿import { useAuth } from "../../app/providers"
+import { Menu } from "lucide-react"
+import { useAuth } from "../../app/providers"
+import { useSidebarStore } from "../../hooks/useSidebarStore"
 import { NotificationBell, ThemeToggle } from "../shared"
 import { Avatar, AvatarFallback } from "../ui/avatar"
 import {
@@ -22,6 +24,7 @@ function getInitials(name?: string | null) {
 
 export function TopNav({ title, breadcrumb }: TopNavProps) {
   const { profile, signOut, user } = useAuth()
+  const { setMobileOpen } = useSidebarStore()
   const displayName = profile?.full_name || user?.email || "User"
 
   const handleSignOut = async () => {
@@ -35,9 +38,20 @@ export function TopNav({ title, breadcrumb }: TopNavProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur">
       <div className="flex h-16 items-center justify-between px-6">
-        <div className="min-w-0">
-          {breadcrumb && <p className="text-xs text-muted-foreground">{breadcrumb}</p>}
-          <h1 className="truncate text-lg font-semibold">{title}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted/60 hover:text-foreground lg:hidden"
+            aria-label="Open sidebar"
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
+          <div className="min-w-0">
+            {breadcrumb && <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{breadcrumb}</p>}
+            <h1 className="truncate text-lg font-semibold">{title}</h1>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
