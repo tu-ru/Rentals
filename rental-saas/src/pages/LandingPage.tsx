@@ -88,11 +88,11 @@ export function LandingPage() {
             <div className="mt-6 space-y-4">
               <div className="rounded-2xl border border-border bg-muted/30 p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tenant Messaging</p>
-                <p className="mt-3 text-2xl font-semibold">Send reminders, notices, and updates from one clear workflow.</p>
+                <p className="mt-3 text-2xl font-semibold">Send reminders, notices, and updates without losing the thread.</p>
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Cash Visibility</p>
-                <p className="mt-3 text-2xl font-semibold">Keep invoices, payments, and balances easy to verify.</p>
+                <p className="mt-3 text-2xl font-semibold">Track invoices, payments, and reconciliation in one clear view.</p>
               </div>
               <div className="rounded-2xl border border-border bg-muted/30 p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Follow-up</p>
